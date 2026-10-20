@@ -46,7 +46,11 @@ h2 { font-size: 13pt; color: #1f4e79; margin-top: 18pt; page-break-after: avoid;
 h3 { font-size: 11pt; page-break-after: avoid; }
 table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; font-size: 8.8pt; page-break-inside: auto; }
 tr { page-break-inside: avoid; }
-th, td { border: 1px solid #b7c4d1; padding: 3px 5px; vertical-align: top; text-align: left; }
+th, td { border: 1px solid #b7c4d1; padding: 3px 5px; vertical-align: top; text-align: left; overflow-wrap: break-word; }
+table.wide { font-size: 6.8pt; table-layout: fixed; }
+table.wide td, table.wide th { overflow-wrap: anywhere; }
+table.wide code { font-size: 6.5pt; }
+table.wide th, table.wide td { padding: 2px 3px; }
 th { background: #e8eef5; }
 table:first-of-type thead { display: none; }   /* the spec's metadata table has an empty header row */
 code { font-family: Consolas, monospace; font-size: 8.8pt; background: #f3f5f8; padding: 0 2px; }
@@ -92,6 +96,15 @@ and accepts it as the agreed specification. Changes after sign-off follow the ch
 </div>"""
 
 
+def mark_wide_tables(body: str) -> str:
+    """Give tables with many columns a smaller font so they fit the page width."""
+    def tag(m: re.Match) -> str:
+        header = re.search(r"<tr>(.*?)</tr>", m.group(0), re.S)
+        cols = header.group(1).count("<th") if header else 0
+        return m.group(0).replace("<table>", '<table class="wide">', 1) if cols >= 7 else m.group(0)
+    return re.sub(r"<table>.*?</table>", tag, body, flags=re.S)
+
+
 def build(md_path: Path, browser: str, rev: str) -> Path:
     text = md_path.read_text(encoding="utf-8")
     num = md_path.name[:2]
@@ -101,6 +114,7 @@ def build(md_path: Path, browser: str, rev: str) -> Path:
     # Links between specs point at .md files; in the PDFs they should point at the PDFs.
     text = re.sub(r"\]\((\d\d-[\w-]+)\.md\)", r"](\1.pdf)", text)
     body = markdown.markdown(text, extensions=["tables", "fenced_code", "sane_lists"])
+    body = mark_wide_tables(body)
     page = f"""<!doctype html><html><head><meta charset="utf-8"><title>{html.escape(title)}</title>
 <style>{CSS}</style></head><body>{body}
 <p class="footer-note">Source: lora-streetlight-specs @ {html.escape(rev)} · {html.escape(md_path.name)}</p>

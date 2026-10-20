@@ -9,7 +9,7 @@
 | **Reviewers** | Gateway hardware developer (for the client), device developer (both sign) |
 | **Status** | Draft. Not frozen |
 
-What every part of the system does when something fails, and what the lights do as a result. The client signs this because it defines the safety behaviour of the road. The device developer signs it because layer 3 (the device's own fallback) and the DALI driver settings live in their firmware.
+What every part of the system does when something fails, and what the lights do as a result. The hardware developer signs this for the client, because it defines the safety behaviour of the road. The device developer signs it because layer 3 (the device's own fallback) and the DALI driver settings live in their firmware.
 
 Shared conventions are in [00](00-common-frame-and-conventions.md). Timers assume the default cycle of 120 s ([04](04-channel-plan-and-airtime.md)). If the cycle is changed, timers defined in cycles scale with it.
 
