@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+pdf/
+*.html
+.DS_Store
+Thumbs.db
