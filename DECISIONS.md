@@ -23,5 +23,6 @@ One line per decision: what was decided, when, and who agreed. Newest at the bot
 | D-017 | 2026-10-21 | The gateway hardware developer decides technical matters for the client: reviews and signs the specs in the client's place. Written approval by message counts | pgorospe | README, all |
 | D-018 | 2026-10-21 | Spec 00 clarified from the reference implementation: key-derivation inputs are single zero-padded 16-byte blocks with little-endian nonces; FCNT32 rebuild checks the duplicate window first, and the window updates only after the MIC verifies | pgorospe (proposal) | 00 |
 | D-019 | 2026-10-21 | Fixes found while coding the message formats: the slave HEARTBEAT is MIC-only like every HEARTBEAT (02 §12.1, matches 00 §6.4); a WHITELIST frame holds at most 15 entries at SF7, not 16 (02 §8.1) | pgorospe (proposal) | 02 |
+| D-020 | 2026-10-21 | REJOIN_REQ is MIC-only like JOIN_REQ (00 §6.4 now lists it, matching 03 §5); found by the cell simulator | pgorospe (proposal) | 00 |
 
 "Proposal" means put forward in a draft and still open for review. It becomes agreed when the relevant parties sign the spec.

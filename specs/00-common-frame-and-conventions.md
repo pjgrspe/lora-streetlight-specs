@@ -181,7 +181,7 @@ MIC  = AES-CMAC(NwkSKey | CellKey | NetKey, B0 ‖ HEADER[8] ‖ ENCRYPTED_PAYLO
 
 `PAYLOAD` is encrypted with AES-128-CTR using `AppSKey` for unicast, `CellKey` / `NetKey` for broadcast, and `DevKey` / `GwKey` for `JOIN_ACC` only.
 
-**Not encrypted (MIC only):** `JOIN_REQ`, `BEACON` on both tiers, and the tier-1 `HEARTBEAT`. Beacons carry only timing and versions, and a node that hasn't joined yet must be able to read them to find its slot timing. Their MIC still stops forgery and replay.
+**Not encrypted (MIC only):** `JOIN_REQ`, `REJOIN_REQ`, `BEACON` on both tiers, and the tier-1 `HEARTBEAT`. Beacons carry only timing and versions, and a node that hasn't joined yet must be able to read them to find its slot timing. Their MIC still stops forgery and replay.
 
 ```
 A_i = 0x01 ‖ DIR ‖ NETID ‖ SRC[2] ‖ DST[2] ‖ FCNT32[4] ‖ 0x00 0x00 0x00 0x00 ‖ i      (i = 1, 2, …)
