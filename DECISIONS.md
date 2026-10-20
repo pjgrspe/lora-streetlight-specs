@@ -21,5 +21,6 @@ One line per decision: what was decided, when, and who agreed. Newest at the bot
 | D-015 | 2026-10-21 | Event code ranges: slave 0x01–0x3F (02), device 0x40–0x7F (03), Master 0x8000+ (01). Spec 07 §6 is the single server alarm catalogue; severity 0 info · 1 warning · 2 alarm · 3 critical everywhere | pgorospe (proposal) | 01, 02, 03, 05, 07 |
 | D-016 | 2026-10-21 | Modbus addresses are 0-based protocol addresses in hex; a server reads whole device blocks, ≤7 per request (9 requests per 60-device section) | pgorospe (proposal) | 01, 07 |
 | D-017 | 2026-10-21 | The gateway hardware developer decides technical matters for the client: reviews and signs the specs in the client's place. Written approval by message counts | pgorospe | README, all |
+| D-018 | 2026-10-21 | Spec 00 clarified from the reference implementation: key-derivation inputs are single zero-padded 16-byte blocks with little-endian nonces; FCNT32 rebuild checks the duplicate window first, and the window updates only after the MIC verifies | pgorospe (proposal) | 00 |
 
 "Proposal" means put forward in a draft and still open for review. It becomes agreed when the relevant parties sign the spec.

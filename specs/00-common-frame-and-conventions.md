@@ -147,9 +147,9 @@ Message authentication and replay protection are in the wire format from v1. Ful
 | Key | Held by | Derived as | Protects |
 |---|---|---|---|
 | `SiteKey` | Master and every Slave, provisioned over the service console. Never on a device. Never sent over the air | Random 128-bit, generated at commissioning | Root for everything below |
-| `DevKey` | One device + its Slave (+ Master) | `AES-CMAC(SiteKey, 0x44 ‖ UID[12] ‖ 0x00…)` truncated to 16 bytes | Device joins |
-| `GwKey(n)` | Slave n + Master | `AES-CMAC(SiteKey, 0x47 ‖ n ‖ 0x00…)` | Slave joins to the Master |
-| `NwkSKey`, `AppSKey` | Session pair per device and per slave | `AES-128-ECB(DevKey or GwKey, k ‖ JoinNonce[4] ‖ DevNonce[2] ‖ NetID ‖ 0x00 × 8)`, k = `0x01` for NwkSKey, `0x02` for AppSKey | MIC and encryption of unicast frames |
+| `DevKey` | One device + its Slave (+ Master) | `AES-CMAC(SiteKey, 0x44 ‖ UID[12] ‖ 0x00 × 3)` (one 16-byte block) | Device joins |
+| `GwKey(n)` | Slave n + Master | `AES-CMAC(SiteKey, 0x47 ‖ n ‖ 0x00 × 14)` (one 16-byte block) | Slave joins to the Master |
+| `NwkSKey`, `AppSKey` | Session pair per device and per slave | `AES-128-ECB(DevKey or GwKey, k ‖ JoinNonce[4] ‖ DevNonce[2] ‖ NetID ‖ 0x00 × 8)`, k = `0x01` for NwkSKey, `0x02` for AppSKey; nonces little-endian | MIC and encryption of unicast frames |
 | `CellKey(n)` | Slave n and all its joined devices | Random per slave, persisted; given to each device inside its encrypted `JOIN_ACC` | Cell broadcasts (beacon, group commands) |
 | `NetKey` | Master and all joined slaves | Random, persisted; given to each slave in its `JOIN_ACC` | Tier-1 broadcasts |
 
@@ -171,7 +171,8 @@ MIC  = AES-CMAC(NwkSKey | CellKey | NetKey, B0 ‖ HEADER[8] ‖ ENCRYPTED_PAYLO
 
 - Each sender keeps a 32-bit `FCNT32` per session, starting at 0 after each join and incremented for every frame it sends (retransmissions included). Only the low 16 bits are sent.
 - **One exception: P0 copies.** A P0 frame sent on both radios, and its repeat 1 s later, are byte-identical copies with the **same** `FCNT32`, so receivers deduplicate them (below). Any other retransmission takes a new counter.
-- The receiver rebuilds `FCNT32` as the smallest value greater than the last accepted one whose low 16 bits match. A gap of more than 16 384 is treated as a replay and dropped.
+- The receiver rebuilds `FCNT32` in two steps. First, if the low 16 bits match one of the last 32 accepted-or-skipped counters (the duplicate window below), it is that counter. Otherwise it is the smallest value greater than the last accepted one whose low 16 bits match; a jump of more than 16 384 is treated as a replay and dropped.
+- The rebuilt `FCNT32` is used to check the MIC. The window is only updated **after** the MIC has verified, so a forged frame can't move it.
 - **Duplicate window:** the receiver keeps the last accepted `FCNT32` per sender plus a 32-entry bitmap. A frame whose counter is already marked is a duplicate. It is acknowledged if it asked for an ACK, but **never executed twice**. This is also how the same P0 frame received on two radios is deduplicated.
 - Counters survive reboots. A gateway writes a high-water mark to FRAM every 64 frames, and a device writes one to flash every 256 frames. After a reboot the sender jumps forward by that step.
 - A sender that reaches `FCNT32 = 0xFFFF0000` MUST rejoin for new session keys.

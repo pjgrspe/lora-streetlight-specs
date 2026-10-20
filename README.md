@@ -25,6 +25,8 @@ Decisions made along the way are logged in [DECISIONS.md](DECISIONS.md).
 4. **One walkthrough call per round** (about 60 minutes) goes through the open issues and decides each one. The decision goes in [DECISIONS.md](DECISIONS.md) and the spec is updated.
 5. Repeat until no blocking issues remain.
 
+**Proposing text changes:** work on a branch (`git checkout -b <topic>`) and open a pull request. Don't push to `main` directly.
+
 ## How sign-off works
 
 1. The spec set is tagged **`spec-v1.0`** and exported to PDF, each with a sign-off page.
