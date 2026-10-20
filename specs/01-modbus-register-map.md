@@ -575,7 +575,7 @@ Result codes are **one system-wide table**, defined in [02 §11.5](02-tier1-prot
 |---|---|---|
 | 0 | `OK` | No error |
 | 3 | `EXPIRED` | Not dispatched before its TTL; or the radio command passed its `not_after` |
-| 4 | `REFUSED_UNSAFE` | Refused by a safety rule, e.g. `SET_TIME` jump > 10 min without `force`, or a slave refusing a level below 254 with an untrusted clock |
+| 4 | `REFUSED_UNSAFE` | Refused by a safety rule, e.g. `SET_TIME` jump > 5 min without `force`, or a slave refusing a level below 254 with an untrusted clock |
 | 5 | `BAD_OPCODE` | Unknown or reserved opcode |
 | 6 | `BAD_PARAMS` | A parameter out of range, or an unused parameter not 0 |
 | 8 | `TARGET_NOT_CONFIGURED` | Section or device not configured |

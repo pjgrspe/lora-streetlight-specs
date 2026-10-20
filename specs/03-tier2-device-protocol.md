@@ -353,20 +353,22 @@ The device, not the radio library, runs this on its DALI line:
 
 ## 13. What the device developer's firmware must do
 
+Protocol-side obligations are numbered DP-n. The fail-safe obligations DD-1 to DD-11 are in [05](05-fail-safe-behaviour.md) §7 and are signed there.
+
 | # | Obligation | Detail |
 |---|---|---|
-| D-1 | **Drive the lamp over DALI** | Set levels with the requested fade; read `ACTUAL LEVEL` and status for every REPORT |
-| D-2 | **Set the DALI fail-safe levels** | `POWER ON LEVEL` and `SYSTEM FAILURE LEVEL` as configured (default 254), at commissioning and on every `REASSERT_CONFIG` / `REPLACE_DRIVER` ([05](05-fail-safe-behaviour.md)) |
-| D-3 | **Run the astronomical schedule locally, always** | Sunrise/sunset from `lat`/`lon`/date (NOAA algorithm or equivalent), plus the offsets and up to 4 dimming steps from `SET_SCHEDULE`. Within **±2 min** of the reference test vectors. This is what switches the lights every night, with no radio traffic |
-| D-4 | **Keep an RTC** | Disciplined by the BEACON time via the library. Clock untrusted (no valid time since power-up and no BEACON) → lamp at **100%** |
-| D-5 | **Honour the command rules** | §10.4, using the library's callbacks |
-| D-6 | **Measure** | Power, voltage, current, energy and temperature where the hardware can; report `0xFFFF…` where it can't. Energy is cumulative and persisted |
-| D-7 | **Persist** | NodeID, slot, home channel, cell parameters, `cell_key`, `group_mask`, schedule, fail-safe levels, `dev_nonce`, the frame-counter high-water mark (every 256 frames), energy and lamp hours. Use a wear-aware scheme: the F103 flash takes ~10 k erase cycles |
-| D-8 | **Give the library the hardware** | SPI to the SX1276, DIO0/DIO1 interrupts, NRESET, a millisecond time base, a storage area. Through `radio_if.h`, `time_if.h`, `store_if.h` |
-| D-9 | **Radio power** | Set conducted power so that **EIRP ≤ 16 dBm** for the antenna and cable fitted (conducted = 16 − antenna gain + cable loss) |
-| D-10 | **Timing** | Call the library's poll function at least every 5 ms, and service DIO interrupts within 1 ms, so slot TX starts within ±20 ms and CMD_ACKs within 300 ms |
-| D-11 | **Watchdog** | Independent watchdog enabled. A reboot must leave the lamp in a safe state (DALI `POWER ON LEVEL` covers the gap) |
-| D-12 | **Provisioning** | On the bench: store UID record and `DevKey` (or the data to derive it) in protected flash; enable readout protection level 1. Never ship a default key |
+| DP-1 | **Drive the lamp over DALI** | Set levels with the requested fade; read `ACTUAL LEVEL` and status for every REPORT |
+| DP-2 | **Set the DALI fail-safe levels** | `POWER ON LEVEL` and `SYSTEM FAILURE LEVEL` as configured (default 254), at commissioning and on every `REASSERT_CONFIG` / `REPLACE_DRIVER` ([05](05-fail-safe-behaviour.md)) |
+| DP-3 | **Run the astronomical schedule locally, always** | Sunrise/sunset from `lat`/`lon`/date (NOAA algorithm or equivalent), plus the offsets and up to 4 dimming steps from `SET_SCHEDULE`. Within **±2 min** of the reference test vectors. This is what switches the lights every night, with no radio traffic |
+| DP-4 | **Keep an RTC** | Disciplined by the BEACON time via the library. Clock untrusted (no valid time since power-up and no BEACON) → lamp at **100%** |
+| DP-5 | **Honour the command rules** | §10.4, using the library's callbacks |
+| DP-6 | **Measure** | Power, voltage, current, energy and temperature where the hardware can; report `0xFFFF…` where it can't. Energy is cumulative and persisted |
+| DP-7 | **Persist** | NodeID, slot, home channel, cell parameters, `cell_key`, `group_mask`, schedule, fail-safe levels, `dev_nonce`, the frame-counter high-water mark (every 256 frames), energy and lamp hours. Use a wear-aware scheme: the F103 flash takes ~10 k erase cycles |
+| DP-8 | **Give the library the hardware** | SPI to the SX1276, DIO0/DIO1 interrupts, NRESET, a millisecond time base, a storage area. Through `radio_if.h`, `time_if.h`, `store_if.h` |
+| DP-9 | **Radio power** | Set conducted power so that **EIRP ≤ 16 dBm** for the antenna and cable fitted (conducted = 16 − antenna gain + cable loss) |
+| DP-10 | **Timing** | Call the library's poll function at least every 5 ms, and service DIO interrupts within 1 ms, so slot TX starts within ±20 ms and CMD_ACKs within 300 ms |
+| DP-11 | **Watchdog** | Independent watchdog enabled. A reboot must leave the lamp in a safe state (DALI `POWER ON LEVEL` covers the gap) |
+| DP-12 | **Provisioning** | On the bench: store UID record and `DevKey` (or the data to derive it) in protected flash; enable readout protection level 1. Never ship a default key |
 
 **The library provides:** frame encode/decode, AES-128 CMAC/CTR, keys and session derivation, replay and duplicate windows, channel scan, join/rejoin/backoff, BEACON tracking and clock offset, slot timing, channel failover, event retry, command parsing and dispatch to callbacks, CMD_ACK, airtime checks, the SX1276 driver (from LoRaMac-node, behind `radio_if.h`).
 
@@ -420,13 +422,13 @@ The API is frozen at M1 only in outline. Exact signatures are frozen when the li
 
 ### 14.3 Test vectors
 
-Delivered **with the library at M4**, generated from the reference implementation: frame encodings for every message type, MIC and encryption with fixed keys and counters, session key derivation, airtime values, and sunrise/sunset times for the site's coordinates (for D-3). Both sides run them in their builds.
+Delivered **with the library at M4**, generated from the reference implementation: frame encodings for every message type, MIC and encryption with fixed keys and counters, session key derivation, airtime values, and sunrise/sunset times for the site's coordinates (for DP-3). Both sides run them in their builds.
 
 ## Open items
 
 | # | Item | Needed by |
 |---|---|---|
-| O-03-1 | Device developer confirms the obligations in §13 are achievable on the Blue Pill (especially D-3 astro schedule and D-6 measurements) | M1 sign-off |
+| O-03-1 | Device developer confirms the obligations in §13 are achievable on the Blue Pill (especially DP-3 astro schedule and DP-6 measurements) | M1 sign-off |
 | O-03-2 | Which measurements the LED device hardware actually provides (V, I, P, E, temperature) | M1 sign-off |
 | O-03-3 | Worst-case first-join time is 12 cycles (24 min) because the device scans 12 channels. Acceptable for commissioning, or should the device be bench-provisioned with its section? | M1 sign-off |
 | O-03-4 | Meter model and how the device developer reads it (direct metering IC or an external Modbus meter); confirms the meter REPORT fields | M1 sign-off |
