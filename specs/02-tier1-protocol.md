@@ -170,7 +170,7 @@ The Master updates each device's Modbus block from these records and stamps its 
 
 ### 8.1 WHITELIST (TYPE `0x13`), Master → slave
 
-The Master owns the site's device registry. Each slave holds only its section's entries. `AUTHORISE_DEVICE`, `REVOKE_DEVICE` and `REPLACE_DEVICE` jobs from the server ([01](01-modbus-register-map.md)) become WHITELIST frames. `PRIO = 2`, `ACKREQ = 1`, unicast, encrypted with `AppSKey`. Max 16 entries per frame at SF7 (8 at SF8).
+The Master owns the site's device registry. Each slave holds only its section's entries. `AUTHORISE_DEVICE`, `REVOKE_DEVICE` and `REPLACE_DEVICE` jobs from the server ([01](01-modbus-register-map.md)) become WHITELIST frames. `PRIO = 2`, `ACKREQ = 1`, unicast, encrypted with `AppSKey`. Max 15 entries per frame at SF7 (4 + 15 × 15 = 229 B; 8 at SF8).
 
 | Off | Size | Field | Notes |
 |---|---|---|---|
@@ -355,7 +355,7 @@ A slave confirms a broadcast command from its devices' next REPORTs (`last_cmd_f
 | 3 | 1 | `peer_rssi` | i8 dBm. RSSI of the last frame the sender received from the peer on this channel (127 = none) |
 
 - **Master:** every cycle at 0.5 s on the channel that isn't carrying the BEACON. Broadcast `0xF00`, MIC'd with `NetKey`, not encrypted.
-- **Slave n:** every 5th cycle, on the inactive upstream radio, at +1.50 in its own slot, in cycles where `(cycle_seq + n) mod 5 = 0`. Unicast to `0x000`, encrypted with `AppSKey`.
+- **Slave n:** every 5th cycle, on the inactive upstream radio, at +1.50 in its own slot, in cycles where `(cycle_seq + n) mod 5 = 0`. Unicast to `0x000`, MIC'd with `NwkSKey`, not encrypted ([00 §6.4](00-common-frame-and-conventions.md)).
 
 ### 12.2 Failover and failback
 
