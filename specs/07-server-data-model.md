@@ -6,7 +6,7 @@
 | **Version** | 0.1 (draft for review) |
 | **Date** | 2026-10-20 |
 | **Owner** | pgorospe |
-| **Reviewers** | Client |
+| **Reviewers** | Gateway hardware developer (for the client) |
 | **Status** | Draft. Not frozen |
 
 What the Local Monitoring Server stores, what operators see, and what they can control. The server reads the Master over Modbus RTU ([01](01-modbus-register-map.md)). Conventions are in [00](00-common-frame-and-conventions.md), and the timing that limits how fresh the data can be is in [04](04-channel-plan-and-airtime.md).

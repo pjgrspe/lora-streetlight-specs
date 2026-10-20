@@ -6,7 +6,7 @@
 | **Version** | 0.1 (draft for review) |
 | **Date** | 2026-10-20 |
 | **Owner** | pgorospe |
-| **Reviewers** | Client |
+| **Reviewers** | Gateway hardware developer (for the client) |
 | **Status** | Draft. Not frozen |
 
 The contract between the Local Monitoring Server and the Master Gateway over RS485 / Modbus RTU. The Master is the Modbus server (slave); the Server is the only Modbus client (master). Shared conventions are in [00](00-common-frame-and-conventions.md).
@@ -698,7 +698,7 @@ A generator expands only the configured sections when building a site-specific p
 
 | # | Item | Needed by |
 |---|---|---|
-| O-01-1 | Client confirmation that 19200 8E1 and unit ID 1 suit their RS485 setup (cable length, other equipment on the bus) | M1 sign-off |
+| O-01-1 | Hardware developer to confirm that 19200 8E1 and unit ID 1 suit their RS485 setup (cable length, other equipment on the bus) | M1 sign-off |
 | O-01-2 | Event buffer capacity (≥ 1000 events) to be confirmed against the NOR flash fitted ([06](06-gateway-hardware-requirements.md)) | M1 sign-off |
 | O-01-4 | Confirm a 15-minute detail interval (power and energy freshness) is acceptable to the client ([04](04-channel-plan-and-airtime.md)) | M1 sign-off |
 | O-01-5 | Decide whether the diagnostic DALI levels option (system failure 250 ≈ 90 %) is used ([05](05-fail-safe-behaviour.md)); defaults stay 254 / 254 | M1 sign-off |

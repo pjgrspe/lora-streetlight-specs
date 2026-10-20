@@ -6,7 +6,7 @@
 | **Version** | 0.1 (draft for review) |
 | **Date** | 2026-10-20 |
 | **Owner** | pgorospe |
-| **Reviewers** | Client, gateway hardware developer |
+| **Reviewers** | Gateway hardware developer (for the client) |
 | **Status** | Draft. Not frozen |
 
 How the Master and the Slaves talk over LoRa: joining, the cycle, summaries and detail, commands, events, redundancy and time. The frame format, addressing, keys and message type numbers are in [00](00-common-frame-and-conventions.md). Channels, spreading factors and timing are in [04](04-channel-plan-and-airtime.md). Both ends of this link are pgorospe's firmware, so this spec is mainly a design record. It is still reviewed and signed at M1.

@@ -6,7 +6,7 @@
 | **Version** | 0.1 (draft for review) |
 | **Date** | 2026-10-20 |
 | **Owner** | pgorospe |
-| **Reviewers** | **Device developer** (primary), client |
+| **Reviewers** | **Device developer** (primary), gateway hardware developer (for the client) |
 | **Status** | Draft. Not frozen |
 
 How a device joins its section's Slave, reports, receives commands and survives the loss of its Slave. **This is the contract between pgorospe and the device developer.** The device developer does not implement this protocol from scratch: pgorospe supplies a **device-role library** that implements it (§14). This spec says what goes over the air and what the device firmware must do around the library.

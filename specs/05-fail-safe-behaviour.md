@@ -6,7 +6,7 @@
 | **Version** | 0.1 (draft for review) |
 | **Date** | 2026-10-20 |
 | **Owner** | pgorospe |
-| **Reviewers** | Client, device developer (both sign) |
+| **Reviewers** | Gateway hardware developer (for the client), device developer (both sign) |
 | **Status** | Draft. Not frozen |
 
 What every part of the system does when something fails, and what the lights do as a result. The client signs this because it defines the safety behaviour of the road. The device developer signs it because layer 3 (the device's own fallback) and the DALI driver settings live in their firmware.
@@ -101,7 +101,7 @@ Dual radios reduce how often layers 2 and 3 are needed, by covering radio, anten
 | `FADE TIME` | Index 7–10 (5.7–16 s) for scheduled changes | Avoids visible flicker and inrush when many lights change together |
 | `MIN LEVEL` | Not below the road-class lux floor (⚠ awaiting DOE/DPWH figures) | Legal dimming floor |
 
-**Client option — diagnostic System Failure Level.** Set `SYSTEM FAILURE LEVEL = 250` (≈90%) instead of 254. A technician can then tell from the road which fault occurred: 100% = power-up, ≈90% = device or DALI failure. The difference is barely visible to drivers. **Client to choose: ☐ 254 (default) ☐ 250 (diagnostic).**
+**Option — diagnostic System Failure Level.** Set `SYSTEM FAILURE LEVEL = 250` (≈90%) instead of 254. A technician can then tell from the road which fault occurred: 100% = power-up, ≈90% = device or DALI failure. The difference is barely visible to drivers. **To choose (hardware developer, for the client): ☐ 254 (default) ☐ 250 (diagnostic).**
 
 These settings live in the driver and **don't survive a driver replacement**, which is why F12 re-pushes them. The device re-asserts them after every `REPLACE_DRIVER` and every `REASSERT_CONFIG`.
 
@@ -141,7 +141,7 @@ By signing, each party agrees that the system behaves as described in this table
 
 | Party | Name | Signature | Date |
 |---|---|---|---|
-| Client | | | |
+| Gateway hardware developer (for the client) | | | |
 | Device developer | | | |
 | pgorospe | | | |
 
@@ -149,9 +149,9 @@ By signing, each party agrees that the system behaves as described in this table
 
 | # | Item | Needed by |
 |---|---|---|
-| O-05-1 | Client choice of System Failure Level: 254 (default) or 250 (diagnostic) | M1 sign-off |
+| O-05-1 | Hardware developer (for the client) to choose the System Failure Level: 254 (default) or 250 (diagnostic) | M1 sign-off |
 | O-05-2 | ⚠ Verify the DALI control-interruption time (~550 ms) and the exact System Failure / Power On semantics against IEC 62386 | Before M4 |
 | O-05-3 | Can the device developer's hardware hold time through a power cut (RTC backup)? If not, DD-1/DD-4 mean every power restore by day gives 100% until the first beacon | M1 sign-off |
 | O-05-4 | DOE/DPWH road-class lux floor for `MIN LEVEL` and dimming profiles | Before dimming profiles are fixed |
 | O-05-5 | Is the 30-min "server lost" threshold right for the client's operations? | M1 sign-off |
-| O-05-6 | Client confirmation that a full-night 100% fallback (no dimming) is acceptable while a section is autonomous | M1 sign-off |
+| O-05-6 | Hardware developer (for the client) to confirm that a full-night 100% fallback (no dimming) is acceptable while a section is autonomous | M1 sign-off |

@@ -6,7 +6,7 @@
 | **Version** | 0.1 (draft for review) |
 | **Date** | 2026-10-20 |
 | **Owner** | pgorospe |
-| **Reviewers** | Gateway hardware developer (signs), client |
+| **Reviewers** | Gateway hardware developer (signs, also for the client) |
 | **Status** | Draft. Not frozen |
 
 What the gateway hardware must provide so the Master and Slave firmware works as specified. It covers the development phase (client-supplied NUCLEO-L476RG boards + SX1276 modules) and the final board. Radio settings and channels are in [00](00-common-frame-and-conventions.md) and [04](04-channel-plan-and-airtime.md).

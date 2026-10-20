@@ -20,5 +20,6 @@ One line per decision: what was decided, when, and who agreed. Newest at the bot
 | D-014 | 2026-10-21 | One system-wide command result-code table (02 §11.5) used by tier-1 and tier-2 CMD_ACK and the Modbus job result | pgorospe (proposal) | 01, 02, 03 |
 | D-015 | 2026-10-21 | Event code ranges: slave 0x01–0x3F (02), device 0x40–0x7F (03), Master 0x8000+ (01). Spec 07 §6 is the single server alarm catalogue; severity 0 info · 1 warning · 2 alarm · 3 critical everywhere | pgorospe (proposal) | 01, 02, 03, 05, 07 |
 | D-016 | 2026-10-21 | Modbus addresses are 0-based protocol addresses in hex; a server reads whole device blocks, ≤7 per request (9 requests per 60-device section) | pgorospe (proposal) | 01, 07 |
+| D-017 | 2026-10-21 | The gateway hardware developer decides technical matters for the client: reviews and signs the specs in the client's place. Written approval by message counts | pgorospe | README, all |
 
 "Proposal" means put forward in a draft and still open for review. It becomes agreed when the relevant parties sign the spec.

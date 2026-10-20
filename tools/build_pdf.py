@@ -28,14 +28,14 @@ BROWSERS = [
 
 # Who signs each spec (see README).
 SIGNERS = {
-    "00": ["Client", "Device developer", "Gateway hardware developer", "pgorospe"],
-    "01": ["Client", "pgorospe"],
-    "02": ["Client", "pgorospe"],
-    "03": ["Device developer", "Client", "pgorospe"],
-    "04": ["Client", "pgorospe"],
-    "05": ["Client", "Device developer", "pgorospe"],
+    "00": ["Gateway hardware developer (for the client)", "Device developer", "pgorospe"],
+    "01": ["Gateway hardware developer (for the client)", "pgorospe"],
+    "02": ["Gateway hardware developer (for the client)", "pgorospe"],
+    "03": ["Device developer", "Gateway hardware developer (for the client)", "pgorospe"],
+    "04": ["Gateway hardware developer (for the client)", "pgorospe"],
+    "05": ["Gateway hardware developer (for the client)", "Device developer", "pgorospe"],
     "06": ["Gateway hardware developer", "pgorospe"],
-    "07": ["Client", "pgorospe"],
+    "07": ["Gateway hardware developer (for the client)", "pgorospe"],
 }
 
 CSS = """

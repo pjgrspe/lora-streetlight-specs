@@ -6,7 +6,7 @@
 | **Version** | 0.1 (draft for review) |
 | **Date** | 2026-10-20 |
 | **Owner** | pgorospe |
-| **Reviewers** | Device developer, gateway hardware developer, client |
+| **Reviewers** | Device developer, gateway hardware developer (for the client) |
 | **Status** | Draft. Not frozen |
 
 This document holds everything the other specs share: units and byte order, addressing, the frame format used on both LoRa tiers, and the security layer. If another spec contradicts this one, this one wins and the conflict is a bug to report.
