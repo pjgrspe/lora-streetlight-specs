@@ -4,3 +4,4 @@ pdf/
 *.html
 .DS_Store
 Thumbs.db
+!guide/*.html

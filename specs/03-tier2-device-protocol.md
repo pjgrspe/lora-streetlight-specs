@@ -65,9 +65,9 @@ Header: `SRC = (GwID << 8) | 0xFE` (unjoined), `DST = GwID << 8`, `DIR = 0`, `PR
 - **Randomness** comes from the SX1276 wideband RSSI register (LSBs of `RegRssiWideband`, collected 32 times), seeded with the UID. The library does this.
 - A new (never joined) UID is accepted only while the Slave's **commissioning window is open** (BEACON flag bit1). A UID that has joined before may join any time.
 
-### 4.3 JOIN_ACC (TYPE `0x08`), Slave → device, 39 bytes
+### 4.3 JOIN_ACC (TYPE `0x08`), Slave → device, 41 bytes
 
-Sent in the downlink window of the same cycle. `DST = (GwID << 8) | 0xFE` for a first join (the device recognises its own JOIN_ACC by the MIC, which only its `DevKey` verifies), or the device's address for a rejoin. `FCNT` = low 16 bits of `dev_nonce`. Encrypted and MIC'd with `DevKey`; `FCNT32` in B0 and A_i = `dev_nonce`. Frame 51 B, 329 ms at SF9.
+Sent in the downlink window of the same cycle. `DST = (GwID << 8) | 0xFE` for a first join (the device recognises its own JOIN_ACC by the MIC, which only its `DevKey` verifies), or the device's address for a rejoin. `FCNT` = low 16 bits of `dev_nonce`. Encrypted and MIC'd with `DevKey`; `FCNT32` in B0 and A_i = `dev_nonce`. Frame 53 B, 329 ms at SF9.
 
 | Off | Size | Field | Notes |
 |---|---|---|---|
@@ -82,8 +82,9 @@ Sent in the downlink window of the same cycle. `DST = (GwID << 8) | 0xFE` for a 
 | 14 | 2 | `beacon_offset_ms` | When the BEACON on `home_channel` is sent, after cell start (0 on channel A, 250 on channel B) |
 | 16 | 16 | `cell_key` | `CellKey` for cell broadcasts |
 | 32 | 2 | `group_mask` | bit g = member of group g (0–15) |
-| 34 | 4 | `utc` | Slave time at TxDone of this frame |
-| 38 | 1 | `flags` | bit0 meter (double slot) · bit1 single-channel mode active · bits 2–7 reserved |
+| 34 | 4 | `utc` | Slave time at TxDone of this frame, s |
+| 38 | 2 | `utc_ms` | Sub-second part, ms. A device that has just (re)joined may receive a group command before its next BEACON; without milliseconds its clock could be up to 1 s off |
+| 40 | 1 | `flags` | bit0 meter (double slot) · bit1 single-channel mode active · bits 2–7 reserved |
 
 Both sides then derive `NwkSKey` and `AppSKey` ([00 §6.1](00-common-frame-and-conventions.md)) and set `FCNT32` to 0. The device persists `node_id`, `home_channel`, `slot`, the cell parameters, `cell_key` and `group_mask` (§12).
 
@@ -135,6 +136,8 @@ For the meter, bits 1–3, 6–9 are 0 and `lamp_on` is 0.
 ## 7. REPORT (TYPE `0x02`), device → Slave
 
 Sent **once per cycle, in the device's slot**. `DST = GwID << 8`, `DIR = 0`, `PRIO = 2`, `ACKREQ = 0`. Encrypted with `AppSKey`. **Reports are not acknowledged**: each one is a snapshot, and a lost one is replaced by the next.
+
+**A device transmits only in a cycle whose BEACON it received.** A missed beacon costs that cycle's REPORT, but stale timing can never put a device on top of a shifted beacon or another device's slot (the Slave moves its cell when it enters or leaves single-channel mode).
 
 **Slot timing:** slot k starts at `cell_start + slot0_ms + (k mod 32) × slot_ms` (k ≥ 32 uses channel B at the same times). In single-channel mode it starts at `cell_start + slot0_ms + k × slot_ms` on the surviving channel. **The device starts transmitting 20 ms after the slot start, within ±20 ms.**
 

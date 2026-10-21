@@ -17,6 +17,8 @@ The interface contracts for the LoRa smart street lighting system. These documen
 
 Decisions made along the way are logged in [DECISIONS.md](DECISIONS.md).
 
+**New here? Start with the [system guide](guide/system-guide.html)** (download it and open it in a browser): diagrams of how everything fits together, each pointing to the spec that holds the details.
+
 ## How review works
 
 1. **Drafts are `0.x`.** Each review round gets a tag (`review-r1`, `review-r2`…) so everyone comments on the same text.

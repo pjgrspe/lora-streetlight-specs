@@ -58,7 +58,7 @@ A slave joins the Master after every boot, and whenever the Master asks it to (a
 
 ### 4.1 JOIN_REQ (TYPE `0x07`), slave → Master, 17 bytes
 
-Sent in the contention window on the active channel. If no JOIN_ACC arrives in the same cycle, the slave retries after a random 1–4 cycles. Header: `SRC = n << 8`, `DST = 0x000`, `DIR = 0`, `ACKREQ = 0`, `PRIO = 1`, `FCNT` = low 16 bits of `DevNonce`. MIC with `GwKey(n)`, `FCNT32` in B0 = `DevNonce`. Not encrypted.
+Sent in the contention window on the active channel. A slave takes the Master's timing from the BEACON or, if it can't hear the beacon, from the HEARTBEAT, which always goes at cycle time 0.5 s (a slave's own cell beacon can blank the Master's beacon until the cell is aligned). If no JOIN_ACC arrives in the same cycle, the slave retries after a random 1–4 cycles. Header: `SRC = n << 8`, `DST = 0x000`, `DIR = 0`, `ACKREQ = 0`, `PRIO = 1`, `FCNT` = low 16 bits of `DevNonce`. MIC with `GwKey(n)`, `FCNT32` in B0 = `DevNonce`. Not encrypted.
 
 | Off | Size | Field | Notes |
 |---|---|---|---|
@@ -67,7 +67,7 @@ Sent in the contention window on the active channel. If no JOIN_ACC arrives in t
 | 14 | 1 | `device_type` | `0x10` = Slave Gateway |
 | 15 | 2 | `fw_version` | major << 8 \| minor |
 
-### 4.2 JOIN_ACC (TYPE `0x08`), Master → slave, 30 bytes
+### 4.2 JOIN_ACC (TYPE `0x08`), Master → slave, 32 bytes
 
 Sent in the slave's slot downlink window (+0.25) or, if the slot has passed, at the next free downlink moment. `DST = n << 8`, `DIR = 1`, `FCNT` = low 16 bits of `dev_nonce`. Encrypted and MIC'd with `GwKey(n)`, `FCNT32` in B0 and A_i = `dev_nonce`.
 
@@ -79,7 +79,8 @@ Sent in the slave's slot downlink window (+0.25) or, if the slot has passed, at 
 | 21 | 2 | `cycle_s` | Cycle length in seconds (default 120) |
 | 23 | 1 | `t1_sf` | Tier-1 spreading factor (7 or 8) |
 | 24 | 2 | `cycle_seq` | Current cycle number |
-| 26 | 4 | `utc` | Master time when this frame completes (see §11) |
+| 26 | 4 | `utc` | Master time at this frame's TxDone, s |
+| 30 | 2 | `utc_ms` | Sub-second part, ms. With it the slave's clock is right to the millisecond from the join, not only after the next BEACON |
 
 Both sides then derive `NwkSKey` and `AppSKey` per [00 §6.1](00-common-frame-and-conventions.md) and reset `FCNT32` to 0. The slave computes its cell offset `cell_start(n)` per [04 §6.3](04-channel-plan-and-airtime.md).
 
@@ -361,7 +362,7 @@ A slave confirms a broadcast command from its devices' next REPORTs (`last_cmd_f
 
 | Who | Fails over when | Fails back when |
 |---|---|---|
-| **Master** | Its primary radio fails a self-test (SPI register read-back, TX-done timeout), **or** no valid frame from any slave arrives on the primary for **3 consecutive cycles** while frames do arrive on the standby | The primary passes self-test and receives at least one valid frame, for **5 consecutive cycles** (10 min) |
+| **Master** | Its primary radio fails a self-test (SPI register read-back, TX-done timeout), **or** no valid frame from any slave arrives on the primary for **3 consecutive cycles** while frames do arrive on the standby | At least **5 cycles** (10 min) on the standby, **and** the primary has received valid frames (the slaves' heartbeats) in at least **2 cycles** since the failover |
 | **Slave** (per its own upstream radios) | It misses **3 consecutive BEACONs** on the active channel while it still hears the Master's HEARTBEAT on the other channel, or its upstream radio fails self-test. It then sends its SUMMARY on the other channel | It hears the BEACON on the active channel again for **5 consecutive cycles** |
 
 - After a Master failover, the BEACON moves to ch 13 and the HEARTBEAT to ch 0 (`standby_active` set). The primary keeps being exercised by the HEARTBEAT.
@@ -419,8 +420,9 @@ When one downstream radio fails ([04 §6.2](04-channel-plan-and-airtime.md)):
 3. **The slave moves its own cell cycle 10 s earlier** (`cell_start'(n) = cell_start(n) − 10 s`). The Master's slot for that slave doesn't move. It now falls at cell time 23–25 s, inside a quiet window of 21–26 s.
 4. The cycle in which the shift happens is 10 s shorter for that cell. Devices resynchronise on the next cell beacon ([03](03-tier2-device-protocol.md)).
 5. The shifted beacons never coincide with the Master's beacon (0–0.6 s): `cell_start'(n) = 2n − 23` is always odd, so the nearest are 119 s and 1 s.
-6. Downlinks (commands, JOIN_ACC) go only on the surviving radio, in a downlink window that starts at cell time 26 s. Cell-broadcast copies for the failed channel are skipped.
-7. **Probe and failback.** The slave keeps sending its beacon on the failed radio every cycle (with `single_channel_mode` set) and keeps that radio listening. Moved devices send one report per 10 cycles on their home channel instead ([03 §11](03-tier2-device-protocol.md)). The first valid frame the failed radio receives ends single-channel mode: the next beacons clear the flag, and the slave raises `DOWN_RADIO_RESTORED`.
+6. After leaving single-channel mode, silence is ignored for **5 cycles** while devices move back home, so the slave doesn't flap back into single-channel mode.
+7. Downlinks (commands, JOIN_ACC) go only on the surviving radio, in a downlink window that starts at cell time 26 s. Cell-broadcast copies for the failed channel are skipped.
+8. **Probe and failback.** The slave keeps sending its beacon on the failed radio every cycle (with `single_channel_mode` set) and keeps that radio listening. Moved devices send one report per 10 cycles on their home channel instead ([03 §11](03-tier2-device-protocol.md)). The first valid frame the failed radio receives ends single-channel mode: the next beacons clear the flag, and the slave raises `DOWN_RADIO_RESTORED`.
 
 ## 16. Store-and-forward
 

@@ -1,0 +1,475 @@
+<title>LoRa Lighting System Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: an engineering guide. One column of prose (~66ch) with full-width figures; each figure makes one claim
+   and points at the spec section that holds the exact numbers. Tier 1 and tier 2 keep one colour each throughout. */
+:root {
+  --bg: #f5f7f8;
+  --panel: #ffffff;
+  --ink: #15212b;
+  --muted: #5b6b77;
+  --rule: #d3dce2;
+  --band: #e9eff2;
+  --tier1: #0f6e8c;
+  --tier2: #b86e12;
+  --wire: #4a5a66;
+  --ok: #23854a;
+  --bad: #c43a3a;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f161c; --panel: #16212a; --ink: #e3eaee; --muted: #93a3ae; --rule: #2c3a45; --band: #1c2a34;
+    --tier1: #4fb8d6; --tier2: #e7a64a; --wire: #a7b6c1; --ok: #4fc47c; --bad: #f06060; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f161c; --panel: #16212a; --ink: #e3eaee; --muted: #93a3ae; --rule: #2c3a45; --band: #1c2a34;
+  --tier1: #4fb8d6; --tier2: #e7a64a; --wire: #a7b6c1; --ok: #4fc47c; --bad: #f06060; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 72px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 40px; }
+.prose { max-width: 66ch; display: grid; gap: 12px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: 2.3rem; font-weight: 700; }
+h2 { font-size: 1.5rem; font-weight: 600; }
+h3 { font-size: 1.1rem; font-weight: 600; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+code, .mono { font-family: var(--font-mono); font-size: 0.88em; }
+.spec { font-family: var(--font-mono); font-size: 0.78rem; color: var(--tier1); white-space: nowrap; }
+section { display: grid; gap: 16px; }
+figure { margin: 0; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+figcaption { color: var(--muted); font-size: 0.9rem; max-width: 80ch; }
+.scroll { overflow-x: auto; }
+svg { display: block; width: 100%; height: auto; color: var(--ink); }
+svg.wide { min-width: 720px; }
+svg text { font-family: var(--font-body); font-size: 12px; fill: currentColor; }
+svg .mono { font-family: var(--font-mono); font-size: 11px; }
+svg .small { font-size: 10.5px; fill: var(--muted); }
+svg .title { font-family: var(--font-display); font-size: 15px; font-weight: 600; }
+svg .t1 { fill: var(--tier1); } svg .t2 { fill: var(--tier2); }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+th { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; }
+.tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; }
+.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.92rem; }
+.toc a { color: var(--tier1); text-decoration: none; }
+.toc a:hover, .toc a:focus-visible { text-decoration: underline; }
+.key { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.85rem; color: var(--muted); }
+.key i { display: inline-block; width: 22px; height: 3px; vertical-align: middle; margin-right: 6px; border-radius: 2px; }
+</style>
+
+<div class="wrap">
+  <header class="prose">
+    <span class="eyebrow">LoRa smart street lighting · for the device and hardware developers</span>
+    <h1>LoRa Lighting System Guide</h1>
+    <p>How the whole system fits together, in pictures. The exact numbers, byte layouts and rules are in the specs (<span class="spec">00</span>–<span class="spec">07</span>); every figure names the section to read next. Where this guide and a spec disagree, the spec wins.</p>
+    <nav class="toc" aria-label="Contents">
+      <a href="#map">The system</a><a href="#channels">Channels</a><a href="#cycle">One cycle</a>
+      <a href="#command">A command, end to end</a><a href="#device">Device lifecycle</a><a href="#frame">The frame</a>
+      <a href="#failures">When things fail</a><a href="#who">Who builds what</a>
+    </nav>
+  </header>
+
+  <!-- 1. System map -->
+  <section id="map">
+    <div class="prose">
+      <h2>The system</h2>
+      <p>Four kinds of box, three links. The server talks only to the Master, over a wire. The Master talks to one Slave gateway per section over <b style="color:var(--tier1)">tier 1</b>. Each Slave runs its own small radio network, its <b style="color:var(--tier2)">cell</b>, with up to 60 devices: one LED driver/monitoring device per pole plus the section's energy meter. The number of sections is configured (1–14).</p>
+    </div>
+    <figure>
+      <div class="scroll">
+      <svg class="wide" viewBox="0 0 1000 400" role="img" aria-label="System map: the server polls the Master over RS485 Modbus; the Master reaches every Slave gateway over tier-1 LoRa on channels 0 and 13; each Slave reaches up to 60 devices over tier-2 LoRa on its two section channels; each device drives its lamp over DALI.">
+        <defs>
+          <marker id="ar1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier1)"/></marker>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier2)"/></marker>
+          <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--wire)"/></marker>
+        </defs>
+        <!-- Server -->
+        <rect x="10" y="150" width="150" height="100" rx="6" fill="var(--panel)" stroke="currentColor" stroke-width="1.5"/>
+        <text x="85" y="176" text-anchor="middle" class="title">Local server</text>
+        <text x="85" y="196" text-anchor="middle" class="small">database · dashboard</text>
+        <text x="85" y="211" text-anchor="middle" class="small">control · alarms</text>
+        <text x="85" y="238" text-anchor="middle" class="mono t1">07</text>
+        <!-- Master -->
+        <rect x="250" y="130" width="190" height="140" rx="6" fill="var(--panel)" stroke="currentColor" stroke-width="1.5"/>
+        <text x="345" y="156" text-anchor="middle" class="title">Master gateway</text>
+        <text x="345" y="176" text-anchor="middle" class="small">register image (cache)</text>
+        <text x="345" y="191" text-anchor="middle" class="small">command jobs · time root</text>
+        <text x="345" y="214" text-anchor="middle" class="mono">radio 0 · ch 0 · primary</text>
+        <text x="345" y="230" text-anchor="middle" class="mono">radio 1 · ch 13 · standby</text>
+        <text x="345" y="256" text-anchor="middle" class="small">1 per site</text>
+        <!-- Slaves -->
+        <rect x="560" y="30" width="190" height="150" rx="6" fill="var(--panel)" stroke="currentColor" stroke-width="1.5"/>
+        <text x="655" y="56" text-anchor="middle" class="title">Slave gateway 1</text>
+        <text x="655" y="76" text-anchor="middle" class="small">runs its section alone</text>
+        <text x="655" y="91" text-anchor="middle" class="small">if the Master is lost</text>
+        <text x="655" y="114" text-anchor="middle" class="mono t1">U0 ch 0 · U1 ch 13 (up)</text>
+        <text x="655" y="131" text-anchor="middle" class="mono t2">A ch 1 · B ch 7 (down)</text>
+        <text x="655" y="152" text-anchor="middle" class="small">4 radios, one TX at a time</text>
+        <rect x="560" y="220" width="190" height="150" rx="6" fill="var(--panel)" stroke="currentColor" stroke-width="1.5"/>
+        <text x="655" y="246" text-anchor="middle" class="title">Slave gateway n</text>
+        <text x="655" y="266" text-anchor="middle" class="small">one per section, n = 1…14</text>
+        <text x="655" y="304" text-anchor="middle" class="mono t1">U0 ch 0 · U1 ch 13 (up)</text>
+        <text x="655" y="321" text-anchor="middle" class="mono t2">A ch n · B ch n+6 (down)</text>
+        <text x="655" y="342" text-anchor="middle" class="small">same firmware in every slave</text>
+        <!-- Devices -->
+        <rect x="830" y="45" width="160" height="120" rx="6" fill="var(--panel)" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 3"/>
+        <text x="910" y="70" text-anchor="middle" class="title">Devices</text>
+        <text x="910" y="90" text-anchor="middle" class="small">≤ 60 per section</text>
+        <text x="910" y="105" text-anchor="middle" class="small">LED device per pole</text>
+        <text x="910" y="120" text-anchor="middle" class="small">+ 1 energy meter</text>
+        <text x="910" y="145" text-anchor="middle" class="mono">1 radio · SF9</text>
+        <rect x="830" y="235" width="160" height="120" rx="6" fill="var(--panel)" stroke="currentColor" stroke-width="1.5" stroke-dasharray="5 3"/>
+        <text x="910" y="260" text-anchor="middle" class="title">Devices</text>
+        <text x="910" y="280" text-anchor="middle" class="small">section n</text>
+        <text x="910" y="335" text-anchor="middle" class="mono">1 radio · SF9</text>
+        <!-- Links -->
+        <line x1="160" y1="200" x2="248" y2="200" stroke="var(--wire)" stroke-width="2.5" marker-end="url(#arw)" marker-start="url(#arw)"/>
+        <text x="204" y="186" text-anchor="middle" class="mono">RS485</text>
+        <text x="204" y="222" text-anchor="middle" class="small">Modbus RTU</text>
+        <text x="204" y="236" text-anchor="middle" class="mono t1">01</text>
+        <line x1="440" y1="180" x2="558" y2="110" stroke="var(--tier1)" stroke-width="2.5" marker-end="url(#ar1)" marker-start="url(#ar1)"/>
+        <line x1="440" y1="220" x2="558" y2="290" stroke="var(--tier1)" stroke-width="2.5" marker-end="url(#ar1)" marker-start="url(#ar1)"/>
+        <text x="500" y="190" text-anchor="middle" class="mono t1">tier 1 · SF7</text>
+        <text x="500" y="206" text-anchor="middle" class="small">beacon, commands ↓</text>
+        <text x="500" y="220" text-anchor="middle" class="small">summaries, events ↑</text>
+        <text x="500" y="236" text-anchor="middle" class="mono t1">02</text>
+        <line x1="750" y1="105" x2="828" y2="105" stroke="var(--tier2)" stroke-width="2.5" marker-end="url(#ar2)" marker-start="url(#ar2)"/>
+        <line x1="750" y1="295" x2="828" y2="295" stroke="var(--tier2)" stroke-width="2.5" marker-end="url(#ar2)" marker-start="url(#ar2)"/>
+        <text x="789" y="200" text-anchor="middle" class="mono t2">tier 2 · cell</text>
+        <text x="789" y="216" text-anchor="middle" class="small">beacon, commands ↓</text>
+        <text x="789" y="230" text-anchor="middle" class="small">reports in slots ↑</text>
+        <text x="789" y="246" text-anchor="middle" class="mono t1">03</text>
+        <text x="910" y="190" text-anchor="middle" class="small">↓ DALI to the lamp's driver</text>
+      </svg>
+      </div>
+      <figcaption>Every link has its own spec. Specs 00 (frame and security) and 04 (channels and timing) apply to both radio tiers; 05 says what every box does when another one fails; 06 is the gateway hardware.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 2. Channels -->
+  <section id="channels">
+    <div class="prose">
+      <h2>Channels</h2>
+      <p>Fourteen 125 kHz channels on a 200 kHz raster fill 915–918 MHz. Tier 1 takes the two band edges, so the primary and standby radios are as far apart as possible. Each section gets two channels 1.2 MHz apart. Up to six sections fit without reusing a pair.</p>
+    </div>
+    <figure>
+      <div class="scroll">
+      <svg class="wide" viewBox="0 0 1000 150" role="img" aria-label="Channel plan: channel 0 at 915.2 MHz is the tier-1 primary and channel 13 at 917.8 MHz the tier-1 standby; section n uses channel n and channel n plus 6.">
+        <defs>
+          <marker id="ar1_2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier1)"/></marker>
+          <marker id="ar2_2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier2)"/></marker>
+          <marker id="arw_2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--wire)"/></marker>
+        </defs>
+        <line x1="20" y1="100" x2="980" y2="100" stroke="currentColor" stroke-width="1"/>
+        <g class="mono">
+          <rect x="24" y="46" width="60" height="44" rx="3" fill="var(--tier1)"/><text x="54" y="66" text-anchor="middle" fill="var(--panel)" style="fill:var(--panel)">ch 0</text><text x="54" y="82" text-anchor="middle" style="fill:var(--panel)">T1 prim.</text>
+          <rect x="92" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="122" y="66" text-anchor="middle">ch 1</text><text x="122" y="82" text-anchor="middle" class="t2">S1 · A</text>
+          <rect x="160" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="190" y="66" text-anchor="middle">ch 2</text><text x="190" y="82" text-anchor="middle" class="t2">S2 · A</text>
+          <rect x="228" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="258" y="66" text-anchor="middle">ch 3</text><text x="258" y="82" text-anchor="middle" class="t2">S3 · A</text>
+          <rect x="296" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="326" y="66" text-anchor="middle">ch 4</text><text x="326" y="82" text-anchor="middle" class="t2">S4 · A</text>
+          <rect x="364" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="394" y="66" text-anchor="middle">ch 5</text><text x="394" y="82" text-anchor="middle" class="t2">S5 · A</text>
+          <rect x="432" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="462" y="66" text-anchor="middle">ch 6</text><text x="462" y="82" text-anchor="middle" class="t2">S6 · A</text>
+          <rect x="500" y="46" width="60" height="44" rx="3" fill="var(--tier2)" opacity="0.25"/><rect x="500" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="530" y="66" text-anchor="middle">ch 7</text><text x="530" y="82" text-anchor="middle" class="t2">S1 · B</text>
+          <rect x="568" y="46" width="60" height="44" rx="3" fill="var(--tier2)" opacity="0.25"/><rect x="568" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="598" y="66" text-anchor="middle">ch 8</text><text x="598" y="82" text-anchor="middle" class="t2">S2 · B</text>
+          <rect x="636" y="46" width="60" height="44" rx="3" fill="var(--tier2)" opacity="0.25"/><rect x="636" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="666" y="66" text-anchor="middle">ch 9</text><text x="666" y="82" text-anchor="middle" class="t2">S3 · B</text>
+          <rect x="704" y="46" width="60" height="44" rx="3" fill="var(--tier2)" opacity="0.25"/><rect x="704" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="734" y="66" text-anchor="middle">ch 10</text><text x="734" y="82" text-anchor="middle" class="t2">S4 · B</text>
+          <rect x="772" y="46" width="60" height="44" rx="3" fill="var(--tier2)" opacity="0.25"/><rect x="772" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="802" y="66" text-anchor="middle">ch 11</text><text x="802" y="82" text-anchor="middle" class="t2">S5 · B</text>
+          <rect x="840" y="46" width="60" height="44" rx="3" fill="var(--tier2)" opacity="0.25"/><rect x="840" y="46" width="60" height="44" rx="3" fill="none" stroke="var(--tier2)" stroke-width="2"/><text x="870" y="66" text-anchor="middle">ch 12</text><text x="870" y="82" text-anchor="middle" class="t2">S6 · B</text>
+          <rect x="908" y="46" width="60" height="44" rx="3" fill="var(--tier1)"/><text x="938" y="66" text-anchor="middle" style="fill:var(--panel)">ch 13</text><text x="938" y="82" text-anchor="middle" style="fill:var(--panel)">T1 stby.</text>
+          <text x="54" y="118" text-anchor="middle" class="small">915.2 MHz</text>
+          <text x="530" y="118" text-anchor="middle" class="small">916.6</text>
+          <text x="938" y="118" text-anchor="middle" class="small">917.8 MHz</text>
+        </g>
+        <path d="M122 40 v-14 h408 v14" fill="none" stroke="var(--tier2)" stroke-width="1.2"/>
+        <text x="326" y="20" text-anchor="middle" class="small">section 1's pair: 1.2 MHz apart</text>
+      </svg>
+      </div>
+      <figcaption>Spec 04 §2–3. Sections 7–14 reuse the pairs of sections 1–6, only where a survey shows they are far enough apart. Band, channels and power are configuration, so the plan can follow NTC's answer without a firmware change.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 3. One cycle -->
+  <section id="cycle">
+    <div class="prose">
+      <h2>One cycle</h2>
+      <p>Everything repeats every <b>120 s</b>. Nobody polls: each Slave reports in its own tier-1 slot, and each device reports in its own cell slot. A gateway can't receive while it transmits, so each Slave starts its cell cycle early by a fixed offset. That puts its tier-1 slot exactly in the cell's quiet window, when none of its devices are transmitting.</p>
+    </div>
+    <figure>
+      <div class="scroll">
+      <svg class="wide" viewBox="0 0 1000 330" role="img" aria-label="Timing of one cycle: the Master's beacon at 0 s, heartbeat at 0.5 s, join window 1 to 2 s and a 2-second slot per Slave from 2 s; Slave 1's cell runs 11 seconds ahead, so its tier-1 slot at Master time 2 to 4 s falls in the cell's quiet window at 13 to 15 s, after the device slots from 1.6 to 11.2 s.">
+        <defs>
+          <marker id="ar1_3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier1)"/></marker>
+          <marker id="ar2_3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier2)"/></marker>
+          <marker id="arw_3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--wire)"/></marker>
+        </defs>
+        <!-- scale: 0..30 s over x 150..970 -->
+        <text x="10" y="64" class="title t1">Master</text>
+        <text x="10" y="80" class="small">tier 1, Master time</text>
+        <rect x="150" y="50" width="11" height="34" fill="var(--tier1)"/>
+        <rect x="164" y="50" width="8" height="34" fill="var(--tier1)" opacity="0.55"/>
+        <rect x="177" y="50" width="27" height="34" fill="var(--band)" stroke="var(--tier1)" stroke-dasharray="3 2"/>
+        <rect x="205" y="50" width="54" height="34" fill="var(--tier1)" opacity="0.85"/>
+        <rect x="260" y="50" width="54" height="34" fill="var(--tier1)" opacity="0.45"/>
+        <rect x="315" y="50" width="54" height="34" fill="var(--tier1)" opacity="0.45"/>
+        <rect x="370" y="50" width="600" height="34" fill="var(--band)"/>
+        <text x="150" y="42" class="mono small">beacon 0 s</text>
+        <text x="206" y="72" class="mono" style="fill:var(--panel)">slave 1</text>
+        <text x="261" y="72" class="mono" style="fill:var(--panel)">slave 2</text>
+        <text x="316" y="72" class="mono" style="fill:var(--panel)">slave 3</text>
+        <text x="380" y="72" class="small">… slave n at 2 + 2(n−1) s · then commands, idle, retries until 120 s</text>
+        <text x="190" y="102" text-anchor="middle" class="small">join</text>
+        <text x="168" y="118" text-anchor="middle" class="small">heartbeat 0.5 s (standby radio)</text>
+
+        <text x="10" y="214" class="title t2">Slave 1 cell</text>
+        <text x="10" y="230" class="small">tier 2, cell time</text>
+        <rect x="150" y="200" width="14" height="34" fill="var(--tier2)"/>
+        <rect x="166" y="200" width="27" height="34" fill="var(--band)" stroke="var(--tier2)" stroke-dasharray="3 2"/>
+        <rect x="194" y="200" width="262" height="34" fill="var(--tier2)" opacity="0.8"/>
+        <rect x="478" y="200" width="109" height="34" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="587" y="200" width="383" height="34" fill="var(--band)"/>
+        <text x="150" y="192" class="mono small">beacons 0 / 0.25 s (A, B)</text>
+        <text x="205" y="222" class="mono" style="fill:var(--panel)">device slots 1.6–11.2 s</text>
+        <text x="532" y="222" text-anchor="middle" class="mono">quiet</text>
+        <text x="597" y="222" class="small">downlink window from 16 s: commands, join accepts</text>
+        <text x="179" y="252" text-anchor="middle" class="small">join</text>
+        <text x="325" y="252" text-anchor="middle" class="small">slots 0–31 on channel A and 32–63 on B, at the same times</text>
+        <!-- alignment -->
+        <rect x="505" y="196" width="55" height="42" fill="none" stroke="var(--tier1)" stroke-width="2.5"/>
+        <path d="M232 86 C 232 150, 532 140, 532 194" fill="none" stroke="var(--tier1)" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#ar1_3)"/>
+        <text x="420" y="146" text-anchor="middle" class="small t1">same instant: Master 2–4 s = cell 13–15 s</text>
+        <!-- axis -->
+        <g class="mono small">
+          <line x1="150" y1="290" x2="970" y2="290" stroke="currentColor"/>
+          <line x1="150" y1="286" x2="150" y2="294" stroke="currentColor"/><text x="150" y="308" text-anchor="middle">0 s</text>
+          <line x1="287" y1="286" x2="287" y2="294" stroke="currentColor"/><text x="287" y="308" text-anchor="middle">5</text>
+          <line x1="423" y1="286" x2="423" y2="294" stroke="currentColor"/><text x="423" y="308" text-anchor="middle">10</text>
+          <line x1="560" y1="286" x2="560" y2="294" stroke="currentColor"/><text x="560" y="308" text-anchor="middle">15</text>
+          <line x1="697" y1="286" x2="697" y2="294" stroke="currentColor"/><text x="697" y="308" text-anchor="middle">20</text>
+          <line x1="833" y1="286" x2="833" y2="294" stroke="currentColor"/><text x="833" y="308" text-anchor="middle">25</text>
+          <line x1="970" y1="286" x2="970" y2="294" stroke="currentColor"/><text x="970" y="308" text-anchor="middle">30 s</text>
+        </g>
+      </svg>
+      </div>
+      <figcaption>Spec 04 §6. The cell starts at <code>cell_start(n) = (2 + 2(n−1) − 13) mod 120 s</code> in Master time, so slave 1's cell begins 11 s before the Master's cycle. If a cell runs on one channel (single-channel mode), its slots run to 20.8 s and the cell shifts 10 s earlier, so the slot then sits in a 21–26 s quiet window. Budget: the busiest box, a Slave, uses about 66% of its 1% duty cycle (04 §7).</figcaption>
+    </figure>
+  </section>
+
+  <!-- 4. A command end to end -->
+  <section id="command">
+    <div class="prose">
+      <h2>A command, end to end</h2>
+      <p>An operator dims a whole site to 50%. The command never waits for a radio round trip on the wire, never goes device by device, and every lamp switches at the same second. Confirmation arrives later, in the reports the devices send anyway.</p>
+    </div>
+    <figure>
+      <div class="scroll">
+      <svg class="wide" viewBox="0 0 1000 470" role="img" aria-label="Sequence of a site-wide dim command: the server writes the Modbus mailbox and gets an immediate accepted state; the Master broadcasts one tier-1 command with execute_at 8 seconds ahead on both radios and repeats it; each Slave rebroadcasts it in its cell on both channels; every device switches at execute_at; confirmation comes from the next scheduled reports, summarised back to the Master, where the server reads the job state.">
+        <defs>
+          <marker id="ar1_4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier1)"/></marker>
+          <marker id="ar2_4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier2)"/></marker>
+          <marker id="arw_4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--wire)"/></marker>
+        </defs>
+        <!-- lifelines -->
+        <g class="title">
+          <text x="150" y="28" text-anchor="middle">Server</text>
+          <text x="400" y="28" text-anchor="middle">Master</text>
+          <text x="650" y="28" text-anchor="middle">Slaves</text>
+          <text x="890" y="28" text-anchor="middle">Devices</text>
+        </g>
+        <g stroke="var(--rule)" stroke-width="2">
+          <line x1="150" y1="40" x2="150" y2="450"/><line x1="400" y1="40" x2="400" y2="450"/>
+          <line x1="650" y1="40" x2="650" y2="450"/><line x1="890" y1="40" x2="890" y2="450"/>
+        </g>
+        <!-- time column -->
+        <g class="mono small">
+          <text x="10" y="74">t = 0</text><text x="10" y="138">+0.1 s</text><text x="10" y="196">+0.3 s</text>
+          <text x="10" y="262">+8 s</text><text x="10" y="330">≤ 2 min</text><text x="10" y="390">next slot</text><text x="10" y="434">any time</text>
+        </g>
+        <!-- 1 -->
+        <line x1="152" y1="70" x2="396" y2="70" stroke="var(--wire)" stroke-width="2" marker-end="url(#arw_4)"/>
+        <text x="274" y="62" text-anchor="middle" class="mono">FC16 mailbox: SET_LEVEL, site</text>
+        <line x1="398" y1="92" x2="154" y2="92" stroke="var(--wire)" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arw_4)"/>
+        <text x="274" y="108" text-anchor="middle" class="small">job ACCEPTED in &lt; 50 ms (01 §8)</text>
+        <!-- 2 -->
+        <line x1="402" y1="134" x2="646" y2="134" stroke="var(--tier1)" stroke-width="2.5" marker-end="url(#ar1_4)"/>
+        <text x="524" y="126" text-anchor="middle" class="mono t1">CMD broadcast · execute_at = now + 8 s</text>
+        <text x="524" y="152" text-anchor="middle" class="small">both radios (ch 0 and 13), repeated 1 s later · P0 (02 §11)</text>
+        <!-- 3 -->
+        <line x1="652" y1="192" x2="886" y2="192" stroke="var(--tier2)" stroke-width="2.5" marker-end="url(#ar2_4)"/>
+        <text x="769" y="184" text-anchor="middle" class="mono t2">cell broadcast, same execute_at</text>
+        <text x="769" y="210" text-anchor="middle" class="small">both channels, repeated (03 §10)</text>
+        <!-- 4 -->
+        <rect x="830" y="240" width="120" height="34" rx="4" fill="var(--tier2)" opacity="0.18" stroke="var(--tier2)"/>
+        <text x="890" y="262" text-anchor="middle" class="mono">all switch at T</text>
+        <text x="760" y="262" text-anchor="end" class="small">duplicates dropped by frame counter and cmd_id</text>
+        <!-- 5 -->
+        <line x1="886" y1="326" x2="654" y2="326" stroke="var(--tier2)" stroke-width="2" marker-end="url(#ar2_4)"/>
+        <text x="769" y="318" text-anchor="middle" class="mono t2">REPORT in each slot</text>
+        <text x="769" y="344" text-anchor="middle" class="small">carries level and last_cmd_fcnt_lo</text>
+        <!-- 6 -->
+        <line x1="646" y1="386" x2="404" y2="386" stroke="var(--tier1)" stroke-width="2" marker-end="url(#ar1_4)"/>
+        <text x="524" y="378" text-anchor="middle" class="mono t1">CMD_ACK + SUMMARY in tier-1 slot</text>
+        <!-- 7 -->
+        <line x1="152" y1="430" x2="396" y2="430" stroke="var(--wire)" stroke-width="2" marker-end="url(#arw_4)"/>
+        <line x1="398" y1="446" x2="154" y2="446" stroke="var(--wire)" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arw_4)"/>
+        <text x="274" y="422" text-anchor="middle" class="mono">poll job state</text>
+        <text x="420" y="446" class="small">CONFIRMED, or PARTIAL with a fail mask (01 §8)</text>
+      </svg>
+      </div>
+      <figcaption>Two frames per tier, whatever the number of lamps. In the simulator, 118 lamps across two sections switch within about 20 ms of each other. A single-pole command follows the same path as a unicast: the device answers with a CMD_ACK within 300 ms.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 5. Device lifecycle -->
+  <section id="device">
+    <div class="prose">
+      <h2>Device lifecycle</h2>
+      <p>This is the part the device-role library runs for you (03 §2, §5, §11). The lamp never depends on it: in every state the device follows its own sunrise/sunset schedule, and with no trusted time it holds the lamp at 100%.</p>
+    </div>
+    <figure>
+      <div class="scroll">
+      <svg class="wide" viewBox="0 0 1000 300" role="img" aria-label="Device state machine: a new device scans for a cell beacon, joins through the contention window and is joined; a device that has joined before rejoins in its own slot after a reboot; three cycles without a beacon puts it in fallback, which ends when the beacon returns.">
+        <defs>
+          <marker id="ar1_5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier1)"/></marker>
+          <marker id="ar2_5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier2)"/></marker>
+          <marker id="arw_5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--wire)"/></marker>
+        </defs>
+        <g>
+          <rect x="30" y="40" width="150" height="56" rx="28" fill="var(--panel)" stroke="currentColor" stroke-width="1.5"/>
+          <text x="105" y="73" text-anchor="middle" class="title">SCANNING</text>
+          <rect x="300" y="40" width="150" height="56" rx="28" fill="var(--panel)" stroke="currentColor" stroke-width="1.5"/>
+          <text x="375" y="73" text-anchor="middle" class="title">JOINING</text>
+          <rect x="570" y="120" width="170" height="64" rx="32" fill="var(--panel)" stroke="var(--ok)" stroke-width="2.5"/>
+          <text x="655" y="150" text-anchor="middle" class="title">JOINED</text>
+          <text x="655" y="168" text-anchor="middle" class="small">reports every cycle</text>
+          <rect x="300" y="200" width="150" height="56" rx="28" fill="var(--panel)" stroke="currentColor" stroke-width="1.5"/>
+          <text x="375" y="233" text-anchor="middle" class="title">REJOINING</text>
+          <rect x="840" y="120" width="140" height="64" rx="32" fill="var(--panel)" stroke="var(--bad)" stroke-width="2"/>
+          <text x="910" y="150" text-anchor="middle" class="title">FALLBACK</text>
+          <text x="910" y="168" text-anchor="middle" class="small">own schedule</text>
+        </g>
+        <g fill="none" stroke="currentColor" stroke-width="1.5">
+          <line x1="182" y1="68" x2="296" y2="68" marker-end="url(#arw_5)"/>
+          <path d="M450 80 C 520 90, 560 110, 575 128" marker-end="url(#arw_5)"/>
+          <path d="M450 224 C 520 214, 560 196, 575 178" marker-end="url(#arw_5)"/>
+          <line x1="375" y1="198" x2="375" y2="100" marker-end="url(#arw_5)"/>
+          <path d="M740 140 C 780 132, 800 132, 836 140" marker-end="url(#arw_5)"/>
+          <path d="M838 168 C 800 178, 780 178, 742 168" marker-end="url(#arw_5)"/>
+          <path d="M300 56 C 250 24, 220 24, 180 50" marker-end="url(#arw_5)"/>
+        </g>
+        <text x="239" y="60" text-anchor="middle" class="small">hears a cell beacon</text>
+        <text x="236" y="16" text-anchor="middle" class="small">8 failed joins</text>
+        <text x="540" y="92" class="small">JOIN_ACC</text>
+        <text x="545" y="228" class="small">JOIN_ACC</text>
+        <text x="385" y="152" class="small">no answer for 3 cycles</text>
+        <text x="788" y="122" text-anchor="middle" class="small">3 cycles, no beacon</text>
+        <text x="788" y="196" text-anchor="middle" class="small">beacon again</text>
+        <text x="30" y="128" class="small">boot, never joined → SCANNING</text>
+        <text x="30" y="276" class="small">boot with a stored slot → REJOINING: request sent in its own slot, so after a mains restore 60 devices never collide</text>
+      </svg>
+      </div>
+      <figcaption>A device that misses 2 beacons listens on its section's other channel. If that beacon says single-channel mode, it moves there and keeps its slot number; otherwise it rejoins through the contention window there (03 §11). A device only transmits in a cycle whose beacon it heard (03 §7).</figcaption>
+    </figure>
+  </section>
+
+  <!-- 6. Frame -->
+  <section id="frame">
+    <div class="prose">
+      <h2>The frame</h2>
+      <p>One format for both tiers and all roles: an 8-byte header, the payload, a 4-byte MIC. Little-endian throughout. The payload is encrypted (except join requests, beacons and heartbeats, which are signed only), and the MIC is checked before anything is decrypted or parsed.</p>
+    </div>
+    <figure>
+      <div class="scroll">
+      <svg class="wide" viewBox="0 0 1000 170" role="img" aria-label="Frame layout: byte 0 holds version, direction, ack request and priority; byte 1 the message type; byte 2 the site NetID; bytes 3 to 5 the 12-bit destination and source addresses; bytes 6 and 7 the frame counter; then the encrypted payload and a 4-byte MIC.">
+        <defs>
+          <marker id="ar1_6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier1)"/></marker>
+          <marker id="ar2_6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tier2)"/></marker>
+          <marker id="arw_6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--wire)"/></marker>
+        </defs>
+        <g stroke="currentColor" stroke-width="1.5" fill="var(--panel)">
+          <rect x="20" y="40" width="110" height="56"/><rect x="130" y="40" width="80" height="56"/><rect x="210" y="40" width="80" height="56"/>
+          <rect x="290" y="40" width="190" height="56"/><rect x="480" y="40" width="110" height="56"/>
+          <rect x="590" y="40" width="280" height="56" fill="var(--band)"/><rect x="870" y="40" width="110" height="56"/>
+        </g>
+        <g class="mono">
+          <text x="75" y="64" text-anchor="middle">VER·DIR·ACK·PRIO</text><text x="75" y="84" text-anchor="middle" class="small">4·1·1·2 bits</text>
+          <text x="170" y="72" text-anchor="middle">TYPE</text>
+          <text x="250" y="72" text-anchor="middle">NETID</text>
+          <text x="385" y="64" text-anchor="middle">DST:12 · SRC:12</text><text x="385" y="84" text-anchor="middle" class="small">GwID:4 | NodeID:8 each</text>
+          <text x="535" y="64" text-anchor="middle">FCNT</text><text x="535" y="84" text-anchor="middle" class="small">low 16 of 32</text>
+          <text x="730" y="64" text-anchor="middle">PAYLOAD</text><text x="730" y="84" text-anchor="middle" class="small">encrypted, AES-128-CTR</text>
+          <text x="925" y="64" text-anchor="middle">MIC</text><text x="925" y="84" text-anchor="middle" class="small">AES-CMAC</text>
+          <text x="75" y="30" text-anchor="middle" class="small">0</text><text x="170" y="30" text-anchor="middle" class="small">1</text>
+          <text x="250" y="30" text-anchor="middle" class="small">2</text><text x="385" y="30" text-anchor="middle" class="small">3–5</text>
+          <text x="535" y="30" text-anchor="middle" class="small">6–7</text><text x="730" y="30" text-anchor="middle" class="small">8 …</text>
+          <text x="925" y="30" text-anchor="middle" class="small">4 bytes</text>
+        </g>
+        <path d="M20 112 v10 h570 v-10" fill="none" stroke="var(--tier1)" stroke-width="1.5"/>
+        <text x="305" y="140" text-anchor="middle" class="mono t1">8-byte header</text>
+        <text x="730" y="128" text-anchor="middle" class="small">≤ 54 B at SF9 · ≤ 243 B at SF7 (400 ms limit)</text>
+        <text x="730" y="148" text-anchor="middle" class="small">12 bytes of overhead in total</text>
+      </svg>
+      </div>
+      <figcaption>Spec 00 §5–7. Address examples: Master <code>0x000</code>, slave of section 3 <code>0x300</code>, device 17 in section 3 <code>0x311</code>, all of section 3 <code>0x3FF</code>. The device-role library builds and checks all of this; device firmware never touches raw frames.</figcaption>
+    </figure>
+  </section>
+
+  <!-- 7. Failures -->
+  <section id="failures">
+    <div class="prose">
+      <h2>When things fail</h2>
+      <p>The rule behind every row: if a failure leaves the lighting in doubt, the lights go to 100% at night. Each box can lose the one above it and keep its lamps on schedule, so no single failure darkens a road. Spec 05 is the signed version of this table.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>What fails</th><th>Who notices, and when</th><th>What happens</th><th>Lights</th></tr></thead>
+        <tbody>
+          <tr><td>Server or RS485 link</td><td>Master: no poll for 30 min</td><td>Master keeps schedules and buffers events with timestamps</td><td>Unchanged</td></tr>
+          <tr><td>Master's primary antenna or radio</td><td>Master: primary silent 3 cycles while the standby still hears slaves</td><td>Beacon moves to the standby; fails back after the repair</td><td>Unchanged</td></tr>
+          <tr><td>Master dead</td><td>Slaves: 3 missed cycles → DEGRADED, 30 → AUTONOMOUS</td><td>Each section runs its own schedule; overrides expire</td><td>Schedule, then 100% all night</td></tr>
+          <tr><td>One slave radio or antenna (cell side)</td><td>Slave: that radio silent 2 cycles</td><td>Single-channel mode: all 64 slots on the surviving channel; probes find the repair</td><td>Unchanged</td></tr>
+          <tr><td>Slave dead</td><td>Devices: 3 cycles without a beacon</td><td>Each device runs its own fallback schedule</td><td>100% dusk to dawn</td></tr>
+          <tr><td>Device dead or DALI link cut</td><td>The driver itself, within about 0.5 s</td><td>DALI driver goes to its SYSTEM FAILURE LEVEL</td><td>100%</td></tr>
+          <tr><td>Clock unknown anywhere</td><td>That box</td><td>Refuses dimming below 100% until time is trusted</td><td>100%</td></tr>
+          <tr><td>Mains lost on a section</td><td>Meter and the slave (all devices silent)</td><td>Alarm; on restore every device rejoins in its own slot</td><td>Dark until mains returns</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 8. Who builds what -->
+  <section id="who">
+    <div class="prose">
+      <h2>Who builds what</h2>
+      <p>The interfaces between people are the specs. The device developer never implements the radio protocol: they link the device-role library and handle DALI, measurement, the schedule and persistence around it.</p>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Part</th><th>Built by</th><th>Read these specs</th></tr></thead>
+        <tbody>
+          <tr><td>Local server: poller, database, dashboard, control</td><td>pgorospe</td><td>01, 07</td></tr>
+          <tr><td>Master and Slave gateway firmware, the LoRa protocol at both tiers</td><td>pgorospe</td><td>00–05</td></tr>
+          <tr><td>Device-role library (linked into the devices)</td><td>pgorospe</td><td>00, 03</td></tr>
+          <tr><td>LED driver/monitoring device and energy meter firmware: DALI, measurement, schedule, persistence</td><td>Device developer</td><td><b>03</b> (§13 is your list), <b>05</b> (DD-1 to DD-11), 00</td></tr>
+          <tr><td>Gateway boards, radios, antennas, RS485, power, enclosure</td><td>Gateway hardware developer</td><td><b>06</b>, then 04 (channels, isolation) and 05</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:.9rem">Everything here runs in the cell simulator first (Code repo, <code>sim/</code>): the same C code as the gateways and devices, with failures you can trigger.</p>
+  </section>
+</div>
