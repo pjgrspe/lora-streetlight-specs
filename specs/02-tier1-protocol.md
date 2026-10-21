@@ -412,11 +412,15 @@ Timers assume `CYCLE = 120 s`. They are counted in cycles, so they scale with th
 
 When one downstream radio fails ([04 §6.2](04-channel-plan-and-airtime.md)):
 
+**Detection.** A dead antenna, coax or connector doesn't show in a radio self-test, so the slave infers it from silence: at the end of each cycle, if a downstream radio received **no valid frame** while at least one joined device has it as home channel, **and** the other radio did receive frames, that radio's silent count goes up; any reception resets it. After **2 silent cycles** the radio is declared failed. A failed self-test (SPI read-back) declares it failed at once.
+
 1. The slave sets `single_channel_mode` in its SUMMARY and its cell beacon, and raises `DOWN_RADIO_FAILED`.
 2. All 64 slot positions run back to back on the surviving channel. The cell's uplink period ends at cell time 20.8 s.
 3. **The slave moves its own cell cycle 10 s earlier** (`cell_start'(n) = cell_start(n) − 10 s`). The Master's slot for that slave doesn't move. It now falls at cell time 23–25 s, inside a quiet window of 21–26 s.
 4. The cycle in which the shift happens is 10 s shorter for that cell. Devices resynchronise on the next cell beacon ([03](03-tier2-device-protocol.md)).
 5. The shifted beacons never coincide with the Master's beacon (0–0.6 s): `cell_start'(n) = 2n − 23` is always odd, so the nearest are 119 s and 1 s.
+6. Downlinks (commands, JOIN_ACC) go only on the surviving radio, in a downlink window that starts at cell time 26 s. Cell-broadcast copies for the failed channel are skipped.
+7. **Probe and failback.** The slave keeps sending its beacon on the failed radio every cycle (with `single_channel_mode` set) and keeps that radio listening. Moved devices send one report per 10 cycles on their home channel instead ([03 §11](03-tier2-device-protocol.md)). The first valid frame the failed radio receives ends single-channel mode: the next beacons clear the flag, and the slave raises `DOWN_RADIO_RESTORED`.
 
 ## 16. Store-and-forward
 

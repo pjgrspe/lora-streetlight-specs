@@ -319,8 +319,9 @@ If the Slave gets no CMD_ACK, it retries up to 3 times, 2 s apart, within `not_a
 | Condition | Device action |
 |---|---|
 | 2 consecutive BEACONs missed on the home channel | Listen on the section's other channel |
-| BEACON heard on the other channel with `single_channel_mode` set | Move there. Use the single-channel slot timing (§7) with the same slot number. No rejoin needed |
-| BEACON heard on the other channel without `single_channel_mode` | The Slave is fine but this device's link isn't. Send REJOIN_REQ in the contention window of that channel; the Slave assigns a new home channel and slot |
+| BEACON heard on the other channel with `single_channel_mode` set | Move there. Use the single-channel slot timing (§7) with the same slot number. No rejoin needed. Once every 10 cycles (when `(cycle_seq + NodeID) mod 10 = 0`) send that cycle's REPORT on the **home** channel instead, at the same slot time: this probe tells the Slave when the failed radio works again ([02 §15](02-tier1-protocol.md)) |
+| Moved for single-channel mode, then a BEACON without `single_channel_mode` | Return to the home channel. No rejoin needed |
+| BEACON heard on the other channel without `single_channel_mode` (and not moved for single-channel mode) | The Slave is fine but this device's link isn't. Send REJOIN_REQ in the **contention window** of that channel (never in its own slot time, which belongs to another device there); the Slave assigns a new home channel and slot on that channel |
 | 3 consecutive cycles with no BEACON on either channel | Enter **`FALLBACK`**: set `fallback_mode`, clear overrides, run the local schedule (§12.2). Keep listening: alternate the two section channels every cycle; every 30 min do a full scan (§3) |
 | BEACON from its own Slave again | Leave `FALLBACK`, send REJOIN_REQ in its slot if the slot map is unchanged, send `FALLBACK_EXITED` |
 
