@@ -30,3 +30,12 @@ One line per decision: what was decided, when, and who agreed. Newest at the bot
 | D-024 | 2026-10-21 | Master failback: after at least 5 cycles on the standby, fail back once the primary has heard slave frames in 2 cycles (slave heartbeats reach it only every 5th cycle, so 5 clean consecutive cycles can never happen) | pgorospe (proposal) | 02 |
 
 "Proposal" means put forward in a draft and still open for review. It becomes agreed when the relevant parties sign the spec.
+
+## Open ideas and issues (not decided)
+
+Written down so they aren't lost. None of these is in a spec yet.
+
+| # | Date | Idea or issue | Next step | Spec |
+|---|---|---|---|---|
+| I-001 | 2026-10-25 | **Faster recovery when a slave's downstream antenna fails.** Measured in the simulator: for about 4½ min after the cut, the devices on the dead channel (about half the section) miss commands; after that they move over by themselves and all respond. Idea: a device that misses a single beacon listens on its section's other channel for the rest of that cycle. Group commands already go out on both channels, so the gap would drop below one cycle with no extra airtime. Cost: about 1 cycle in 100 a device hops because of ordinary noise, and a unicast sent on its home channel in that cycle waits for the next retry. | First, the server automatically resends to the targets that didn't confirm (fail mask), a few minutes later. That covers every cause of a missed command (M5). Revisit this idea only if the gap still matters after that | 03, 07 |
+| I-002 | 2026-10-25 | **Single-channel mode: the downlink window overlaps uplink slots.** With one channel lost, uplink slots run back to back to 20.8 s, but the downlink window still starts at 16 s, so a JOIN_ACC can collide with device reports (seen in the simulator, seed 19). The downlink window probably needs to start after the moved quiet window | Propose a fix to 04 §6.2 before sign-off | 04 |
