@@ -42,7 +42,8 @@ Frame format, addressing, keys and type numbers: [00](00-common-frame-and-conven
 - A device that has joined before **first listens on its persisted home channel** for 2 cycles.
 - Otherwise it listens on channels 1–12 in turn, **one full cycle (`CYCLE` + 1 s) per channel**, at the cell SF (SF9 by default; then SF8, SF7). Worst case for a first join: 12 cycles (24 min at 120 s).
 - A BEACON is accepted for discovery if its `NETID` matches the site's NetID (provisioned on the bench, or learned from the first BEACON whose JOIN_ACC succeeds). **The BEACON is MIC'd but not encrypted**, so an unjoined device can read its timing. It can't verify the MIC until it holds `CellKey`; it uses the timing only to place its JOIN_REQ. After a boot, a device with a stored `CellKey` does the same until its REJOIN_REQ is answered: the JOIN_ACC gives the broadcast counter the MIC needs, and the time ([00 §6.3](00-common-frame-and-conventions.md)).
-- If it hears several Slaves, it tries the strongest (RSSI) first. A Slave that doesn't have the device's UID in its whitelist never answers, and after 8 attempts the device moves on to the next Slave.
+- If it hears several Slaves, it tries the strongest (RSSI) first: it remembers up to 4 Slaves heard while scanning, joins the strongest heard so far, and after a failed join scans the strongest untried Slave's channel before going on with the raster. It doesn't wait to hear every channel first. A Slave that doesn't have the device's UID in its whitelist never answers, and after 8 attempts the device moves on to the next Slave.
+- **A device that has joined before and finds its own Slave rejoins in its own slot** (REJOIN_REQ, §5), never with a JOIN_REQ in the contention window, so a cell coming back from an outage doesn't storm it.
 
 ## 4. Joining
 
@@ -249,7 +250,7 @@ Forwarded unchanged by the Slave in tier-1 EVENTs ([02 §9](02-tier1-protocol.md
 | `0x47` | `FALLBACK_ENTERED` | warning | — (sent after the Slave is found again) |
 | `0x48` | `FALLBACK_EXITED` | info | minutes spent in fallback u16 |
 
-`FALLBACK_ENTERED` and `FALLBACK_EXITED` start after a random 0–15 cycles, because a whole cell may leave `FALLBACK` together. The library queues both itself.
+Only `FALLBACK_EXITED` is sent: it carries the minutes spent in fallback, and `FALLBACK_ENTERED` would go at the same moment, so it isn't sent separately. It starts after a random 0–31 cycles, because a whole cell may leave `FALLBACK` together and the contention window must stay free for devices still rejoining. The library queues it itself.
 | `0x49` | `CLOCK_UNTRUSTED` | alarm | — |
 | `0x4A` | `OVER_TEMPERATURE` | warning | temperature i8 |
 | `0x4B` | `SUPPLY_OUT_OF_RANGE` | warning | voltage dV u16 |
@@ -330,8 +331,8 @@ If the Slave gets no CMD_ACK, it retries up to 3 times, 2 s apart, within `not_a
 | BEACON heard on the other channel with `single_channel_mode` set | Move there. Use the single-channel slot timing (§7) with the same slot number. No rejoin needed. Once every 10 cycles (when `(cycle_seq + NodeID) mod 10 = 0`) send that cycle's REPORT on the **home** channel instead, at the same slot time: this probe tells the Slave when the failed radio works again ([02 §15](02-tier1-protocol.md)) |
 | Moved for single-channel mode, then a BEACON without `single_channel_mode` | Return to the home channel. No rejoin needed |
 | BEACON heard on the other channel without `single_channel_mode` (and not moved for single-channel mode) | The Slave is fine but this device's link isn't. Send REJOIN_REQ in the **contention window** of that channel (never in its own slot time, which belongs to another device there); the Slave assigns a new home channel and slot on that channel |
-| 3 consecutive cycles with no BEACON on either channel | Enter **`FALLBACK`**: set `fallback_mode`, clear overrides, run the local schedule (§12.2). Keep listening: alternate the two section channels every cycle; every 30 min do a full scan (§3) |
-| BEACON from its own Slave again | Leave `FALLBACK`, send REJOIN_REQ in its slot if the slot map is unchanged, send `FALLBACK_EXITED` |
+| 3 consecutive cycles with no BEACON on either channel | Enter **`FALLBACK`**: set `fallback_mode`, clear overrides, run the local schedule (§12.2). Keep listening: alternate the two section channels every cycle. Every 30–60 min (random, so a cell doesn't rescan in step) scan channels 1–12, one cycle each (§3). A Slave other than its own is tried only if its BEACON shows the commissioning window open (it can't take a new UID otherwise, §4.2), and only once per scan: no JOIN_ACC, back to `FALLBACK` |
+| BEACON from its own Slave again | Leave `FALLBACK`, send REJOIN_REQ in its slot if the slot map is unchanged, send `FALLBACK_EXITED`. If the BEACON came on the other channel (the device was alternating), listen on the home channel for one more cycle first; ask for a new slot there only if the home channel stays silent |
 
 ## 12. Configuration, swap and driver replacement
 
@@ -387,7 +388,7 @@ Protocol-side obligations are numbered DP-n. The fail-safe obligations DD-1 to D
 
 **≤ 16 KB flash, ≤ 3 KB RAM**, on STM32F103 (Cortex-M3, no FPU). Bare metal, no RTOS, no malloc, no floating point. C99. Portable to the device developer's final board.
 
-Measured on the Cortex-M3 (arm-none-eabi-gcc `-Os`, unused code removed by the linker), 2026-10-29: the library with its SX1276 driver, events and deferred results is **9.7 KB flash**. A device holds **1.1 KB RAM** of library state, plus ⚠ about 0.9 KB of stack at the deepest point (estimated).
+Measured on the Cortex-M3 (arm-none-eabi-gcc `-Os`, unused code removed by the linker), 2026-10-29: the library with its SX1276 driver, events, deferred results and the FALLBACK rescan is **10.4 KB flash**. A device holds **1.1 KB RAM** of library state, plus ⚠ about 0.9 KB of stack at the deepest point (estimated).
 
 ### 14.2 API
 
@@ -408,7 +409,7 @@ The API is the reference code, not a sketch: `lora/lp_dev.h`, `lora/lp_port.h` a
 | Firmware → library | `lp_dev_busy()` | Before a REBOOT: reset only once it returns 0 |
 | Library → firmware | `lp_dev_app_t.on_state` | Every state change; on `FALLBACK`, clear overrides and run the local schedule |
 
-Time is a wrapping 32-bit millisecond counter, compared with `lp_ms_diff()`. `lp_dev_config_t.reset_cause` carries the cause into the REJOIN_REQ. Still planned before M4: a 30-min rescan in `FALLBACK` and strongest-Slave selection. Exact signatures are frozen when the library is delivered (M4).
+Time is a wrapping 32-bit millisecond counter, compared with `lp_ms_diff()`. `lp_dev_config_t.reset_cause` carries the cause into the REJOIN_REQ. Every gap the device developer raised (G1–G14) is now in the library or the specs. Exact signatures are frozen when the library is delivered (M4).
 
 ### 14.3 Test vectors
 
