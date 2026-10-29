@@ -257,7 +257,7 @@ Unicast to `n << 8`, or broadcast to `0xF00` (all slaves, MIC/encrypted with `Ne
 | 2 | 1 | `opcode` | Table below |
 | 3 | 2 | `target` | 12-bit address ([00 §3](00-common-frame-and-conventions.md)) or `0x8000 \| g` for group g (0–15) |
 | 5 | 4 | `execute_at` | UTC seconds. 0 = execute on receipt |
-| 9 | 4 | `not_after` | UTC seconds. Discard if received or still queued after this |
+| 9 | 4 | `not_after` | UTC seconds. Discard if received or still queued after this. The Master sets `execute_at` + 10 min, the job TTL ([01 §8.4](01-modbus-register-map.md)), so a resent copy (§11.6) is still valid |
 | 13 | 0–32 | `params` | Per opcode |
 
 **Opcodes** (same numbers as the Modbus mailbox, [01](01-modbus-register-map.md)):
@@ -314,6 +314,7 @@ A slave confirms a broadcast command from its devices' next REPORTs (`last_cmd_f
 
 - A P0 CMD is sent **immediately**, not in a window, **on both tier-1 radios**, and repeated once 1 s later.
 - **The copies are byte-identical** (same `FCNT`). Receivers drop the second and later copies by the duplicate window ([00 §6.3](00-common-frame-and-conventions.md)) and by `cmd_id`.
+- If any of these copies falls in the contention window or the slots (cycle time 1.0 s to the end of the last slot), a slave may be transmitting and hear none of them. **One more identical pair then goes right after the last slot**, one on each radio. With few slaves it still arrives before `execute_at`, so the lamps still switch together.
 - A slave receiving a P0 CMD forwards it into its cell immediately ([04 §6.4](04-channel-plan-and-airtime.md)) and sends its first CMD_ACK (`result = 1`) in the next contention window or slot.
 - P0 traffic may use the 25% airtime reserve ([04 §7](04-channel-plan-and-airtime.md)).
 - A slave in `DEGRADED`, `AUTONOMOUS` or `CLOCK_UNTRUSTED` state **may refuse an unsafe command** (any `SET_LEVEL` below the scheduled level while its clock is untrusted) with `result = 4` (`REFUSED_UNSAFE`).
@@ -345,6 +346,18 @@ A slave confirms a broadcast command from its devices' next REPORTs (`last_cmd_f
 | 17 | `SUPERSEDED` | Replaced by a newer command for the same target | | | ✓ |
 | 18 | `TOO_LATE` | `execute_at` in the past or more than 24 h ahead | | | ✓ |
 | 19–255 | — | Reserved | | | |
+
+### 11.6 Resends
+
+The Master follows every CMD until each slave it went to has answered with a CMD_ACK (any result, interim or final):
+
+- **Who must answer:** for a site or group command, every slave that is joined and online when it is sent; for a section or device command, that slave.
+- **When the answer is due:** a slave answers in its slot of the next cycle (§11.4); one cycle more is allowed, because a slot carries one frame (§3) and a resent frame may be ahead of the answer. After the slave's slot in that second cycle, the answer counts as missing.
+- **Resend:** the CMD goes again to that slave alone, as a unicast (session keys, `ACKREQ = 0`, its CMD_ACK is the answer), in the downlink period after the last slot. The radio alternates: the active radio first, then the other. **Up to 3 resends**, never after `not_after`. Each is counted in the slave's `diag_cmd_retries` ([01 §6.9](01-modbus-register-map.md)).
+- **A slave that has already seen the `cmd_id`** answers `result = 2` (`DUPLICATE`) and does not execute it again (§11.3). The final CMD_ACK follows as usual.
+- **Into the cell:** the slave gives devices the same deadline (`not_after_s` = `not_after` − `execute_at`, 60–600 s, [03 §10.1](03-tier2-device-protocol.md)). A copy that arrives after `execute_at` is executed at once.
+
+Devices that missed both cell copies of a group command are not resent by the slave or the Master: they show in the job's fail mask, and the Server resends to them (I-001).
 
 ## 12. Redundant radios: HEARTBEAT, failover, failback
 

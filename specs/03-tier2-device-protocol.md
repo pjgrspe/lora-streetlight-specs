@@ -271,7 +271,7 @@ Sent in the downlink window (cell time ≥ 16 s), or **immediately** for P0 ([04
 | 2 | 1 | `opcode` | §10.2 |
 | 3 | 1 | `group` | Group command: `0xFF` = every device in the cell, 0–15 = group g. Unicast: `0xFE` |
 | 4 | 4 | `execute_at` | UTC seconds. 0 = execute on receipt |
-| 8 | 2 | `not_after_s` | Seconds after `execute_at` (or after receipt if `execute_at` = 0) beyond which the command is discarded. 0 = 60 s |
+| 8 | 2 | `not_after_s` | Seconds after `execute_at` (or after receipt if `execute_at` = 0) beyond which the command is discarded. 0 = 60 s. For a group command from the Master, the Slave copies the Master's deadline (60–600 s, [02 §11.6](02-tier1-protocol.md)) |
 | 10 | … | `params` | Per opcode |
 
 - **Unicast:** `DST` = device address, encrypted with `AppSKey`, `ACKREQ = 1`. Params up to 44 B (SF9).
