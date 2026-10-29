@@ -67,7 +67,7 @@ Sent in the contention window on the active channel. A slave takes the Master's 
 | 14 | 1 | `device_type` | `0x10` = Slave Gateway |
 | 15 | 2 | `fw_version` | major << 8 \| minor |
 
-### 4.2 JOIN_ACC (TYPE `0x08`), Master → slave, 32 bytes
+### 4.2 JOIN_ACC (TYPE `0x08`), Master → slave, 36 bytes
 
 Sent in the slave's slot downlink window (+0.25) or, if the slot has passed, at the next free downlink moment. `DST = n << 8`, `DIR = 1`, `FCNT` = low 16 bits of `dev_nonce`. Encrypted and MIC'd with `GwKey(n)`, `FCNT32` in B0 and A_i = `dev_nonce`.
 
@@ -81,6 +81,7 @@ Sent in the slave's slot downlink window (+0.25) or, if the slot has passed, at 
 | 24 | 2 | `cycle_seq` | Current cycle number |
 | 26 | 4 | `utc` | Master time at this frame's TxDone, s |
 | 30 | 2 | `utc_ms` | Sub-second part, ms. With it the slave's clock is right to the millisecond from the join, not only after the next BEACON |
+| 32 | 4 | `bcast_fcnt` | `FCNT32` of the Master's next `NetKey` broadcast. The slave starts its broadcast receive window here ([00 §6.3](00-common-frame-and-conventions.md)) |
 
 Both sides then derive `NwkSKey` and `AppSKey` per [00 §6.1](00-common-frame-and-conventions.md) and reset `FCNT32` to 0. The slave computes its cell offset `cell_start(n)` per [04 §6.3](04-channel-plan-and-airtime.md).
 

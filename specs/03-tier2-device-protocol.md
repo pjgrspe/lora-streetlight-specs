@@ -41,7 +41,7 @@ Frame format, addressing, keys and type numbers: [00](00-common-frame-and-conven
 - Cell channels are raster channels 1–12 ([04 §2–3](04-channel-plan-and-airtime.md)). Downlink frames use **inverted IQ**; uplink frames normal IQ ([00 §4](00-common-frame-and-conventions.md)).
 - A device that has joined before **first listens on its persisted home channel** for 2 cycles.
 - Otherwise it listens on channels 1–12 in turn, **one full cycle (`CYCLE` + 1 s) per channel**, at the cell SF (SF9 by default; then SF8, SF7). Worst case for a first join: 12 cycles (24 min at 120 s).
-- A BEACON is accepted for discovery if its `NETID` matches the site's NetID (provisioned on the bench, or learned from the first BEACON whose JOIN_ACC succeeds). **The BEACON is MIC'd but not encrypted**, so an unjoined device can read its timing. It can't verify the MIC until it holds `CellKey`; it uses the timing only to place its JOIN_REQ.
+- A BEACON is accepted for discovery if its `NETID` matches the site's NetID (provisioned on the bench, or learned from the first BEACON whose JOIN_ACC succeeds). **The BEACON is MIC'd but not encrypted**, so an unjoined device can read its timing. It can't verify the MIC until it holds `CellKey`; it uses the timing only to place its JOIN_REQ. After a boot, a device with a stored `CellKey` does the same until its REJOIN_REQ is answered: the JOIN_ACC gives the broadcast counter the MIC needs, and the time ([00 §6.3](00-common-frame-and-conventions.md)).
 - If it hears several Slaves, it tries the strongest (RSSI) first. A Slave that doesn't have the device's UID in its whitelist never answers, and after 8 attempts the device moves on to the next Slave.
 
 ## 4. Joining
@@ -65,9 +65,9 @@ Header: `SRC = (GwID << 8) | 0xFE` (unjoined), `DST = GwID << 8`, `DIR = 0`, `PR
 - **Randomness** comes from the SX1276 wideband RSSI register (LSBs of `RegRssiWideband`, collected 32 times), seeded with the UID. The library does this.
 - A new (never joined) UID is accepted only while the Slave's **commissioning window is open** (BEACON flag bit1). A UID that has joined before may join any time.
 
-### 4.3 JOIN_ACC (TYPE `0x08`), Slave → device, 41 bytes
+### 4.3 JOIN_ACC (TYPE `0x08`), Slave → device, 45 bytes
 
-Sent in the downlink window of the same cycle. `DST = (GwID << 8) | 0xFE` for a first join (the device recognises its own JOIN_ACC by the MIC, which only its `DevKey` verifies), or the device's address for a rejoin. `FCNT` = low 16 bits of `dev_nonce`. Encrypted and MIC'd with `DevKey`; `FCNT32` in B0 and A_i = `dev_nonce`. Frame 53 B, 329 ms at SF9.
+Sent in the downlink window of the same cycle. `DST = (GwID << 8) | 0xFE` for a first join (the device recognises its own JOIN_ACC by the MIC, which only its `DevKey` verifies), or the device's address for a rejoin. `FCNT` = low 16 bits of `dev_nonce`. Encrypted and MIC'd with `DevKey`; `FCNT32` in B0 and A_i = `dev_nonce`. Frame 57 B, 349 ms at SF9.
 
 | Off | Size | Field | Notes |
 |---|---|---|---|
@@ -85,6 +85,7 @@ Sent in the downlink window of the same cycle. `DST = (GwID << 8) | 0xFE` for a 
 | 34 | 4 | `utc` | Slave time at TxDone of this frame, s |
 | 38 | 2 | `utc_ms` | Sub-second part, ms. A device that has just (re)joined may receive a group command before its next BEACON; without milliseconds its clock could be up to 1 s off |
 | 40 | 1 | `flags` | bit0 meter (double slot) · bit1 single-channel mode active · bits 2–7 reserved |
+| 41 | 4 | `bcast_fcnt` | `FCNT32` of the Slave's next `CellKey` broadcast. The device starts its broadcast receive window here ([00 §6.3](00-common-frame-and-conventions.md)) |
 
 Both sides then derive `NwkSKey` and `AppSKey` ([00 §6.1](00-common-frame-and-conventions.md)) and set `FCNT32` to 0. The device persists `node_id`, `home_channel`, `slot`, the cell parameters, `cell_key` and `group_mask` (§12).
 

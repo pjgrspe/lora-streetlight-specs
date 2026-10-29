@@ -82,6 +82,8 @@ SF10 and above are not used in v1. A link that doesn't close at SF9 is fixed wit
 | LED device report | 32 B | 72 ms | 134 ms | **247 ms** |
 | Meter report | 56 B | 108 ms | 195 ms | **349 ms** |
 | Cell group command | 28 B | — | — | 226 ms |
+| Tier-1 JOIN_ACC | 48 B | 98 ms | 175 ms | — |
+| Device JOIN_ACC | 57 B | — | — | 349 ms |
 
 Firmware computes time on air with the Semtech formula (`lora_airtime_ms()`) and refuses any frame over 400 ms.
 
