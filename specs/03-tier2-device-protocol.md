@@ -191,7 +191,7 @@ Sent every cycle on both channels: channel A at cell time 0.00, channel B at 0.2
 | 8 | 1 | `flags` | bit0 `clock_trusted` · bit1 commissioning window open · bit2 `single_channel_mode` · bit3 `has_event_ack_bitmap` · bit4 `slave_autonomous` (lost the Master) · bits 5–7 reserved |
 | 9 | 1 | `slotmap_ver` | |
 | 10 | 1 | `config_ver` | Section configuration version. A device whose stored value differs expects a configuration push |
-| 11 | 4 | `event_ack_bitmap` | Present only if flag bit3. bit i = an EVENT from the device in slot (channel base + i) was received last cycle. Channel base = 0 on channel A, 32 on channel B. In single-channel mode the bitmap covers slots 0–31 in the beacon at 0.00 and 32–63 in the beacon at 0.25 |
+| 11 | 4 | `event_ack_bitmap` | Present only if flag bit3. Each beacon acknowledges the EVENTs received **on its own channel** last cycle: bit (slot mod 32) for the sending device. In single-channel mode the surviving channel's beacon covers every device on it, so slots k and k + 32 share a bit; if both sent an EVENT in the same cycle, one may take the other's ACK (⚠ rare; its state is still in every REPORT). The beacon on the failed channel can't be heard, so it can't carry them |
 
 **Timing from the BEACON:** the device timestamps RxDone, computes `cell_start = beacon_time − beacon_offset_ms` in Slave time, and keeps an EWMA of its clock offset (α = 1/4). Devices need slot accuracy of ±20 ms. Drift between two ±20 ppm crystals over one 120 s cycle is under 5 ms.
 
@@ -239,7 +239,7 @@ Forwarded unchanged by the Slave in tier-1 EVENTs ([02 §9](02-tier1-protocol.md
 
 | Code | Name | Severity | `data` |
 |---|---|---|---|
-| `0x40` | `DEVICE_RESTARTED` | warning | reset cause u8 |
+| `0x40` | `DEVICE_RESTARTED` | warning | reset cause u8. **Raised by the Slave** when it accepts the device's REJOIN_REQ (which carries the reset cause), never sent by the device: after a mains restore every device would send it in the same contention window |
 | `0x41` | `LAMP_FAULT` | alarm | — |
 | `0x42` | `DRIVER_FAULT` | alarm | — |
 | `0x43` | `DALI_BUS_FAULT` | alarm | fault code u8 (3 or 4) |
@@ -248,6 +248,8 @@ Forwarded unchanged by the Slave in tier-1 EVENTs ([02 §9](02-tier1-protocol.md
 | `0x46` | `FAULT_CLEARED` | info | cleared fault code u8 |
 | `0x47` | `FALLBACK_ENTERED` | warning | — (sent after the Slave is found again) |
 | `0x48` | `FALLBACK_EXITED` | info | minutes spent in fallback u16 |
+
+`FALLBACK_ENTERED` and `FALLBACK_EXITED` start after a random 0–15 cycles, because a whole cell may leave `FALLBACK` together. The library queues both itself.
 | `0x49` | `CLOCK_UNTRUSTED` | alarm | — |
 | `0x4A` | `OVER_TEMPERATURE` | warning | temperature i8 |
 | `0x4B` | `SUPPLY_OUT_OF_RANGE` | warning | voltage dV u16 |
@@ -307,7 +309,9 @@ Answers **every unicast CMD**, sent 100–300 ms after the CMD's RxDone, on the 
 | 5 | 1 | `level_actual` | |
 | 6 | 1 | `level_target` | |
 
-If the Slave gets no CMD_ACK, it retries up to 3 times, 2 s apart, within `not_after`.
+If the Slave gets no CMD_ACK, it retries up to 3 times, 2 s apart, within `not_after`. It starts a unicast at least 0.8 s plus its airtime before the end of the downlink window, so the CMD_ACK (and a `QUERY`'s REPORT) never runs into the next beacon.
+
+**A command that takes longer** (`REPLACE_DRIVER`; a REBOOT that must first send its CMD_ACK): a device that answers `ACCEPTED` to a command with `execute_at` = 0 sends a second, final CMD_ACK with the same `cmd_id` when it is done, in the contention window of a following cycle (§4.2 access rules). The Slave stops retrying on the `ACCEPTED` and waits up to 3 cycles for the final one, then reports `FAILED`. `QUERY` answers with a REPORT also when the CMD is a retry (`DUPLICATE`), since the first REPORT may be the frame that was lost.
 
 ### 10.4 Rules every device follows
 
@@ -383,7 +387,7 @@ Protocol-side obligations are numbered DP-n. The fail-safe obligations DD-1 to D
 
 **≤ 16 KB flash, ≤ 3 KB RAM**, on STM32F103 (Cortex-M3, no FPU). Bare metal, no RTOS, no malloc, no floating point. C99. Portable to the device developer's final board.
 
-Measured on the Cortex-M3 (arm-none-eabi-gcc `-Os`, unused code removed by the linker), 2026-10-28: the library with its SX1276 driver is **8.3 KB flash**. A device holds **0.9 KB RAM** of library state, plus ⚠ about 0.9 KB of stack at the deepest point (estimated).
+Measured on the Cortex-M3 (arm-none-eabi-gcc `-Os`, unused code removed by the linker), 2026-10-29: the library with its SX1276 driver, events and deferred results is **9.7 KB flash**. A device holds **1.1 KB RAM** of library state, plus ⚠ about 0.9 KB of stack at the deepest point (estimated).
 
 ### 14.2 API
 
@@ -398,7 +402,13 @@ The API is the reference code, not a sketch: `lora/lp_dev.h`, `lora/lp_port.h` a
 | Library → firmware | `lp_dev_app_t`: `execute`, `build_report`, `levels` | Commands, the REPORT, CMD_ACK contents |
 | Library → board | `lp_sx1276_hw_t`: `select`, `xfer`, `reset`, `delay_ms` | SPI and pins (DP-8) |
 
-Time is a wrapping 32-bit millisecond counter, compared with `lp_ms_diff()`. Planned additions before M4, from the device developer's review: an event API, a state-change callback, seeding the clock from a valid RTC, deferred command results, a REPORT after `QUERY`, the reset cause in REJOIN_REQ, a 30-min rescan in `FALLBACK` and strongest-Slave selection. Exact signatures are frozen when the library is delivered (M4).
+| Firmware → library | `lp_dev_event()` | An EVENT (§9); the library sends and retries it |
+| Firmware → library | `lp_dev_set_time()` | At boot, from a valid RTC (05 DD-1) |
+| Firmware → library | `lp_dev_cmd_done()` | When a command whose `execute` returned `ACCEPTED` is finished |
+| Firmware → library | `lp_dev_busy()` | Before a REBOOT: reset only once it returns 0 |
+| Library → firmware | `lp_dev_app_t.on_state` | Every state change; on `FALLBACK`, clear overrides and run the local schedule |
+
+Time is a wrapping 32-bit millisecond counter, compared with `lp_ms_diff()`. `lp_dev_config_t.reset_cause` carries the cause into the REJOIN_REQ. Still planned before M4: a 30-min rescan in `FALLBACK` and strongest-Slave selection. Exact signatures are frozen when the library is delivered (M4).
 
 ### 14.3 Test vectors
 
