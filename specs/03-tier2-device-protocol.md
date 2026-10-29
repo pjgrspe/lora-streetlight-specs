@@ -4,7 +4,7 @@
 |---|---|
 | **Spec** | 03 — Tier-2 device protocol (Slave Gateway ↔ LED devices and energy meter) |
 | **Version** | 0.1 (draft for review) |
-| **Date** | 2026-10-20 |
+| **Date** | 2026-10-29 |
 | **Owner** | pgorospe |
 | **Reviewers** | **Device developer** (primary), gateway hardware developer (for the client) |
 | **Status** | Draft. Not frozen |
@@ -137,7 +137,7 @@ For the meter, bits 1–3, 6–9 are 0 and `lamp_on` is 0.
 
 Sent **once per cycle, in the device's slot**. `DST = GwID << 8`, `DIR = 0`, `PRIO = 2`, `ACKREQ = 0`. Encrypted with `AppSKey`. **Reports are not acknowledged**: each one is a snapshot, and a lost one is replaced by the next.
 
-**A device transmits only in a cycle whose BEACON it received.** A missed beacon costs that cycle's REPORT, but stale timing can never put a device on top of a shifted beacon or another device's slot (the Slave moves its cell when it enters or leaves single-channel mode).
+**A device transmits only in a cycle whose BEACON it received.** A missed beacon costs that cycle's REPORT, but stale timing can never put a device on top of a shifted beacon or another device's slot (the Slave moves its cell when it enters or leaves single-channel mode). That one cycle is 10 s shorter or 10 s longer. The device takes each beacon's timing as it comes; a stretched cycle shows up as one missed beacon, which costs nothing ([02](02-tier1-protocol.md) §15).
 
 **Slot timing:** slot k starts at `cell_start + slot0_ms + (k mod 32) × slot_ms` (k ≥ 32 uses channel B at the same times). In single-channel mode it starts at `cell_start + slot0_ms + k × slot_ms` on the surviving channel. **The device starts transmitting 20 ms after the slot start, within ±20 ms.**
 
@@ -367,14 +367,14 @@ Protocol-side obligations are numbered DP-n. The fail-safe obligations DD-1 to D
 | DP-4 | **Keep an RTC** | Disciplined by the BEACON time via the library. Clock untrusted (no valid time since power-up and no BEACON) → lamp at **100%** |
 | DP-5 | **Honour the command rules** | §10.4, using the library's callbacks |
 | DP-6 | **Measure** | Power, voltage, current, energy and temperature where the hardware can; report `0xFFFF…` where it can't. Energy is cumulative and persisted |
-| DP-7 | **Persist** | NodeID, slot, home channel, cell parameters, `cell_key`, `group_mask`, schedule, fail-safe levels, `dev_nonce`, the frame-counter high-water mark (every 256 frames), energy and lamp hours. Use a wear-aware scheme: the F103 flash takes ~10 k erase cycles |
-| DP-8 | **Give the library the hardware** | SPI to the SX1276, DIO0/DIO1 interrupts, NRESET, a millisecond time base, a storage area. Through `radio_if.h`, `time_if.h`, `store_if.h` |
+| DP-7 | **Persist** | NodeID, slot, home channel, cell parameters, `cell_key`, `group_mask`, schedule, fail-safe levels, `dev_nonce` (written before each JOIN_REQ / REJOIN_REQ is sent), energy and lamp hours. No frame-counter high-water mark: every boot rejoins with new session keys ([00](00-common-frame-and-conventions.md) §6.3). Use a wear-aware scheme: the F103 flash takes ~10 k erase cycles |
+| DP-8 | **Give the library the hardware** | SPI to the SX1276, NSS, NRESET and a busy-wait delay, through `lp_sx1276_hw_t`; a DIO0 interrupt that records the time; a wrapping millisecond counter. The firmware stores `lp_dev_persist_t` itself (DP-7). See §14.2 |
 | DP-9 | **Radio power** | Set conducted power so that **EIRP ≤ 16 dBm** for the antenna and cable fitted (conducted = 16 − antenna gain + cable loss) |
 | DP-10 | **Timing** | Call the library's poll function at least every 5 ms, and service DIO interrupts within 1 ms, so slot TX starts within ±20 ms and CMD_ACKs within 300 ms |
 | DP-11 | **Watchdog** | Independent watchdog enabled. A reboot must leave the lamp in a safe state (DALI `POWER ON LEVEL` covers the gap) |
-| DP-12 | **Provisioning** | On the bench: store UID record and `DevKey` (or the data to derive it) in protected flash; enable readout protection level 1. Never ship a default key |
+| DP-12 | **Provisioning** | On the bench: store UID record, `DevKey` (or the data to derive it) and `tz_offset_min` (+480) in protected flash; enable readout protection level 1. Never ship a default key |
 
-**The library provides:** frame encode/decode, AES-128 CMAC/CTR, keys and session derivation, replay and duplicate windows, channel scan, join/rejoin/backoff, BEACON tracking and clock offset, slot timing, channel failover, event retry, command parsing and dispatch to callbacks, CMD_ACK, airtime checks, the SX1276 driver (from LoRaMac-node, behind `radio_if.h`).
+**The library provides:** frame encode/decode, AES-128 CMAC/CTR, keys and session derivation, replay and duplicate windows, channel scan, join/rejoin/backoff, BEACON tracking and clock offset, slot timing, channel failover, event retry, command parsing and dispatch to callbacks, CMD_ACK, airtime checks, CAD before contention frames, the SX1276 driver (behind `lp_port_t`, written from the Semtech datasheet).
 
 ## 14. Device-role library
 
@@ -382,47 +382,22 @@ Protocol-side obligations are numbered DP-n. The fail-safe obligations DD-1 to D
 
 **≤ 16 KB flash, ≤ 3 KB RAM**, on STM32F103 (Cortex-M3, no FPU). Bare metal, no RTOS, no malloc, no floating point. C99. Portable to the device developer's final board.
 
-### 14.2 API sketch
+Measured on the Cortex-M3 (arm-none-eabi-gcc `-Os`, unused code removed by the linker), 2026-10-28: the library with its SX1276 driver is **8.3 KB flash**. A device holds **0.9 KB RAM** of library state, plus ⚠ about 0.9 KB of stack at the deepest point (estimated).
 
-```c
-/* lsl_device.h — LoRa street lighting, device role (sketch, v0.1) */
+### 14.2 API
 
-typedef struct {
-    void (*on_set_level)(uint8_t level, uint8_t fade, uint16_t ttl_min);
-    void (*on_resume_schedule)(void);
-    void (*on_identify)(uint8_t pattern, uint16_t duration_s);
-    void (*on_set_schedule)(const lsl_schedule_t *s);
-    void (*on_config)(const lsl_config_t *c);          /* REASSERT_CONFIG, SET_FAILSAFE_LEVELS */
-    void (*on_replace_driver)(uint8_t short_addr);     /* result via lsl_cmd_done() */
-    void (*on_reboot)(void);
-    void (*on_time)(uint32_t utc, uint16_t ms, bool trusted);
-    void (*on_state)(lsl_state_t state);               /* JOINED, FALLBACK, ... */
-    uint8_t (*clock_trusted)(void);                    /* app reports its own clock trust */
-} lsl_callbacks_t;
+The API is the reference code, not a sketch: `lora/lp_dev.h`, `lora/lp_port.h` and `lora/lp_sx1276.h` in `lora-streetlight/protocol/`. Its README shows the wiring.
 
-int  lsl_init(const lsl_hw_t *hw, const lsl_callbacks_t *cb, uint8_t device_type);
-void lsl_poll(void);                      /* call from the main loop, at least every 5 ms */
-void lsl_on_dio0(void);                   /* call from the DIO0 EXTI handler */
-void lsl_on_dio1(void);                   /* call from the DIO1 EXTI handler */
+| Who | Calls | When |
+|---|---|---|
+| Firmware → library | `lp_sx1276_init()`, `lp_sx1276_port()`, `lp_dev_init()` | Boot |
+| Firmware → library | `lp_dev_poll(now_ms)` | At the deadline it returns, and at least every 5 ms (DP-10) |
+| Firmware → library | `lp_sx1276_service()`, then `lp_dev_on_rx()` or `lp_dev_on_tx_done()` with the time the DIO0 interrupt recorded | After each DIO0 interrupt |
+| Firmware → library | `lp_dev_persist_dirty()` | After each call above; store `lp_dev_persist_t` when it returns 1 (DP-7) |
+| Library → firmware | `lp_dev_app_t`: `execute`, `build_report`, `levels` | Commands, the REPORT, CMD_ACK contents |
+| Library → board | `lp_sx1276_hw_t`: `select`, `xfer`, `reset`, `delay_ms` | SPI and pins (DP-8) |
 
-void lsl_set_led_report(const lsl_led_report_t *r);    /* latest values, sent in the next slot */
-void lsl_set_meter_report(const lsl_meter_report_t *r);
-int  lsl_send_event(uint8_t code, uint8_t severity, const uint8_t *data, uint8_t len);
-void lsl_cmd_done(uint16_t cmd_id, uint8_t result);    /* for deferred commands such as REPLACE_DRIVER */
-
-lsl_state_t lsl_state(void);
-```
-
-Hardware hooks the device firmware implements:
-
-```c
-/* radio_if.h */ spi transfer, NSS, NRESET, DIO pin read, radio_delay_us
-/* time_if.h  */ uint32_t time_ms(void);       /* monotonic millisecond counter */
-/* store_if.h */ int store_read(uint16_t key, void *buf, uint16_t len);
-                 int store_write(uint16_t key, const void *buf, uint16_t len);
-```
-
-The API is frozen at M1 only in outline. Exact signatures are frozen when the library is delivered (M4).
+Time is a wrapping 32-bit millisecond counter, compared with `lp_ms_diff()`. Planned additions before M4, from the device developer's review: an event API, a state-change callback, seeding the clock from a valid RTC, deferred command results, a REPORT after `QUERY`, the reset cause in REJOIN_REQ, a 30-min rescan in `FALLBACK` and strongest-Slave selection. Exact signatures are frozen when the library is delivered (M4).
 
 ### 14.3 Test vectors
 

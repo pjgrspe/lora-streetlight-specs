@@ -4,7 +4,7 @@
 |---|---|
 | **Spec** | 05 — Fail-safe behaviour table |
 | **Version** | 0.1 (draft for review) |
-| **Date** | 2026-10-28 |
+| **Date** | 2026-10-29 |
 | **Owner** | pgorospe |
 | **Reviewers** | Gateway hardware developer (for the client), device developer (both sign) |
 | **Status** | Draft. Not frozen |
@@ -112,7 +112,7 @@ Each item is testable on the bench. The device developer confirms each one in wr
 | # | Obligation | Test |
 |---|---|---|
 | DD-1 | Keep a real-time clock and a trusted/untrusted flag. The clock is set from cell beacons | Power-cycle without beacon: report shows `clock_trusted = 0` |
-| DD-2 | Store latitude, longitude, timezone offset, dusk/dawn offsets (from `SET_SCHEDULE`) in non-volatile memory | Power-cycle; values read back unchanged |
+| DD-2 | Store latitude, longitude and dusk/dawn offsets (from `SET_SCHEDULE`), and the timezone offset (provisioned on the bench, +480; [00](00-common-frame-and-conventions.md) §1), in non-volatile memory | Power-cycle; values read back unchanged |
 | DD-3 | Compute sunset/sunrise locally, and run the **fallback schedule**: ON at 100% from dusk to dawn, no dimming, when in `fallback_mode` | Switch the slave off: within 6 min the device enters fallback and follows dusk/dawn (test with a shifted clock) |
 | DD-4 | With no trusted time and no beacon, drive the light to **100%**, day or night | Boot with no RTC backup and no slave: light at 100% |
 | DD-5 | Enter `fallback_mode` after 3 missed cycles on both channels; try the other channel after 2 missed beacons on the home channel | Kill one slave radio, then both; check timing |

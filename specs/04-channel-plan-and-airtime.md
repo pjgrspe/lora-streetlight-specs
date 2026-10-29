@@ -4,7 +4,7 @@
 |---|---|
 | **Spec** | 04 — Channel plan and airtime budget |
 | **Version** | 0.1 (draft for review) |
-| **Date** | 2026-10-20 |
+| **Date** | 2026-10-29 |
 | **Owner** | pgorospe |
 | **Reviewers** | Gateway hardware developer (for the client), device developer |
 | **Status** | Draft. Provisional until NTC confirms the radio limits (SOW assumption A3) |
@@ -128,7 +128,8 @@ t (s)   cell time, from the start of the slave's cell cycle
 ```
 
 - **Slots:** 64 slot positions per cell, numbered 0–63. Slots 0–31 run on channel A and 32–63 on channel B, at the same times. An LED device uses 1 slot. The meter uses 2 consecutive slots (0.6 s) on the same channel. 60 devices with one meter need 61 slot positions.
-- **One channel lost:** if one downstream radio fails, the surviving channel runs all slot positions back to back. 64 × 0.3 s = 19.2 s starting at 1.6 s, so it ends at 20.8 s. The quiet window moves to 21–26 s. **The slave starts its cell cycle 10 s earlier** (`cell_start(n) − 10 s`), so its unchanged tier-1 slot now falls at cell time 23–25 s, inside the new quiet window. The Master's slot plan doesn't change, so neighbouring slaves are unaffected. The slave reports the mode change in its SUMMARY ([02](02-tier1-protocol.md) §15).
+- **One channel lost:** if one downstream radio fails, the surviving channel runs all slot positions back to back. 64 × 0.3 s = 19.2 s starting at 1.6 s, so it ends at 20.8 s. The quiet window moves to 21–26 s, and **the downlink window starts at 26 s**. **The slave starts its cell cycle 10 s earlier** (`cell_start(n) − 10 s`), so its unchanged tier-1 slot now falls at cell time 23–25 s, inside the new quiet window. The Master's slot plan doesn't change, so neighbouring slaves are unaffected. The slave reports the mode change in its SUMMARY ([02](02-tier1-protocol.md) §15).
+- **The mode changes only at a cycle boundary.** To enter single-channel mode, the slave cuts the current cycle to `CYCLE − 10 s`. To leave it, the slave stretches the current cycle to `CYCLE + 10 s`. The first beacon with the new flag is also the first at the new timing, so the slave and its devices never run on different timings within a cycle.
 - **Devices listen continuously** outside their own slot. A unicast or group command can therefore be sent at any time in the downlink window, and needs no prior announcement.
 
 ### 6.3 Aligning a cell with its tier-1 slot
