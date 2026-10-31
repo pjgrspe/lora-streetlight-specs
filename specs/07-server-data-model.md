@@ -4,7 +4,7 @@
 |---|---|
 | **Spec** | 07 — Local Monitoring Server data model, dashboard and control requirements |
 | **Version** | 0.1 (draft for review) |
-| **Date** | 2026-10-20 |
+| **Date** | 2026-10-29 |
 | **Owner** | pgorospe |
 | **Reviewers** | Gateway hardware developer (for the client) |
 | **Status** | Draft. Not frozen |
@@ -29,7 +29,7 @@ What the Local Monitoring Server stores, what operators see, and what they can c
 |---|---|
 | Poller and API | Python 3.12, FastAPI, `pymodbus`. One process owns the serial port |
 | Database | PostgreSQL 16 + TimescaleDB (hypertables for telemetry) |
-| UI | Server-rendered web front-end, with Grafana embedded for charts |
+| UI | One web app: React + TypeScript (Vite), built to static files that FastAPI serves on the server PC. Charts are part of the app (no embedded Grafana). Live values arrive over a WebSocket. Look and wording follow the Streetlight RMS design system |
 | Packaging | Docker Compose on Linux, or native Windows services. Decided at installation |
 | Serial | Isolated USB-RS485 adapter, identified by its serial number, not by port name |
 
@@ -172,14 +172,15 @@ This is **the system's alarm catalogue**: every alarm an operator can see, and e
 | UI-1 | **Site view:** every section with its counts (online / stale / offline / not configured / on / faulted), section power, slave state and open alarms |
 | UI-2 | **Section view:** every pole in the section, in pole order, with state, level and last report time. Plus the slave's radios, failover state and airtime |
 | UI-3 | **Pole view:** current and recent values, a 7-day chart (level, power), the event history, the assignment history (device swaps) and command history |
-| UI-4 | **Device states and colours:** online = green, stale = amber, offline = red, not configured = grey, faulted = red outline. **Every value shows its age** ("12 s ago") |
+| UI-4 | **Device states and colours:** online = green, stale = amber, offline = red, not configured = grey, faulted = red outline, each always with its word on screen (Working, Late, Not responding, Not set up, Faulty). **Every value shows its age** ("12 s ago") |
 | UI-5 | Optional **map view** when poles have coordinates. Not required for acceptance |
 | UI-6 | **Alarm list:** filter by severity, section and state. Acknowledge (operator) and view cleared alarms. Unacknowledged critical alarms are shown on every page |
 | UI-7 | **Job progress:** each command shows its state and `n_confirmed / n_targets`. PARTIAL is shown plainly, with the failed poles listed and a "retry failed" action |
 | UI-8 | **Action and confirmation are shown separately.** "Command sent — lights switch at 18:02:05" first. Per-device confirmation fills in as reports arrive (up to one cycle) |
 | UI-9 | **Gateway health page:** Modbus link, Master and every slave: state, uptime, radios, counters, airtime |
 | UI-10 | **Energy page:** section kWh per day and month, power charts from the meter |
-| UI-11 | The UI works in current Chrome and Edge on a desktop screen. A tablet layout is not required |
+| UI-11 | The UI works in current Chrome and Edge on a desktop screen, and on a phone browser connected to the site's own network (one column, larger touch targets). Access from outside the site network stays an optional add-on (§1) |
+| UI-12 | **Plain language.** Operators and crews are not engineers: every screen uses the design system's vocabulary (light, area, brightness, Main gateway, Area gateway; alerts titled in words with what to do). Engineering values (addresses, DALI levels, dBm, channels, codes) appear only in a closed "Technical details" section |
 
 ## 8. Control requirements
 
