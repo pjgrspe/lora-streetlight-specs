@@ -174,7 +174,7 @@ This is **the system's alarm catalogue**: every alarm an operator can see, and e
 | UI-3 | **Pole view:** current and recent values, a 7-day chart (level, power), the event history, the assignment history (device swaps) and command history |
 | UI-4 | **Device states and colours:** online = green, stale = amber, offline = red, not configured = grey, faulted = red outline, each always with its word on screen (Working, Late, Not responding, Not set up, Faulty). **Every value shows its age** ("12 s ago") |
 | UI-5 | Optional **map view** when poles have coordinates. Not required for acceptance |
-| UI-6 | **Alarm list:** filter by severity, section and state. Acknowledge (operator) and view cleared alarms. Unacknowledged critical alarms are shown on every page |
+| UI-6 | **Alarm list:** filter by severity, section and state. Acknowledge (operator) and view cleared alarms. Unacknowledged critical alarms are shown on every page. Acknowledging ("Seen") records who and when; an alarm that ends with a partner event stays listed until it clears, a one-off alarm is done once seen; many can be acknowledged at once (D-034) |
 | UI-7 | **Job progress:** each command shows its state and `n_confirmed / n_targets`. PARTIAL is shown plainly, with the failed poles listed and a "retry failed" action |
 | UI-8 | **Action and confirmation are shown separately.** "Command sent — lights switch at 18:02:05" first. Per-device confirmation fills in as reports arrive (up to one cycle) |
 | UI-9 | **Gateway health page:** Modbus link, Master and every slave: state, uptime, radios, counters, airtime |
@@ -197,6 +197,7 @@ This is **the system's alarm catalogue**: every alarm an operator can see, and e
 | CTL-9 | **Commissioning (admin):** open a commissioning window (0x08), authorise a device UID for a section and pole (0x09), revoke (0x0A), replace a device (0x0B), replace a driver (0x0C), re-assert configuration (0x0D), set fail-safe levels (0x0E) |
 | CTL-10 | `FORCE_FAILOVER` (0x0F) and `REBOOT` (0x07) are admin-only and shown on the gateway health page |
 | CTL-11 | Retrying a failed job retries only the poles that didn't confirm |
+| CTL-11a | **Automatic resend (D-034):** 2 min after a level command ends with poles that didn't confirm, the Server resends once to those poles (one unicast each, at most 4 in flight, the override time left). Poles not responding are resent when they are heard again, until the override ends. Never when a newer command covers them |
 | CTL-12 | Commands are absolute (a level, never "up 10 %"). ON/OFF is never a toggle |
 
 ## 9. Users and roles
