@@ -51,13 +51,13 @@ Each requirement has an ID (`HW-xx`), a level (MUST / SHOULD) and a verification
 | **SPI1** | PA5 / PA6 / PA7 | R1 (Master) · U1 + D1 (Slave) | ⚠ On the Nucleo, PA5 also drives user LED LD2 through solder bridge SB21. Either accept the LED flickering with SPI clock, or **open SB21** so the LED doesn't load SCK (recommended on the bench boards). PA5 is not available as an indicator |
 | **SPI2** | PB13 / PB14 / PB15 | R2 (Master) · U2 + D2 (Slave) | |
 | **SPI3** | PC10 / PC11 / PC12 | FRAM + NOR flash | **A third SPI bus is required** so storage is never on a radio bus (HW-40) |
-| USART1 | PA9 TX / PA10 RX / **PA12 DE** | RS485 (Master) | PA12 = USART1_DE (hardware driver enable). ⚠ PA11/PA12 are also USB OTG pins; confirm nothing is fitted on them on the Nucleo |
+| USART1 | PA9 TX / PA10 RX / **PA12 DE** | RS485 (Master) | PA12 = USART1_DE (hardware driver enable). PA11/PA12 are free on the Nucleo: no user USB, morpho CN10-14/12 only (UM1724) |
 | USART2 | PA2 TX / PA3 RX | Service console | **Reserved for the ST-LINK virtual COM port** (SB13/SB14 default). Don't use PA2/PA3 for anything else |
 | SWD | PA13 / PA14 (+ NRST) | Debug | Reserved |
 | LSE | PC14 / PC15 | 32.768 kHz RTC crystal | Reserved |
-| HSE | PH0 / PH1 | Main clock (ST-LINK MCO on Nucleo) | Reserved |
+| HSE | PH0 / PH1 | **Not available on the NUCLEO-L476RG**: the ST-LINK MCO isn't connected to OSC_IN (UM1724 §6.7.1). The firmware runs from HSI16, or MSI trimmed by the LSE. A crystal on the final board is optional | Reserved |
 
-Alternative for RS485 if USART1 conflicts: USART3, PC4 TX / PC5 RX / PB1 DE (then move U2 BUSY off PC5).
+Alternative for RS485 if USART1 conflicts: USART3, PC4 TX / PC5 RX / PB1 DE (then move U2 BUSY off PC5, and LED radio 3 off PB1).
 
 ### 3.2 Radio control lines
 
@@ -201,7 +201,7 @@ Results are recorded in the specs repo with photos of the antenna arrangement.
 
 | # | Item | Needed by |
 |---|---|---|
-| O-06-1 | ⚠ Verify every pin in §3 against UM1724 and the L476RG datasheet (alternate functions, SB defaults, LD2 on PA5, USB on PA11/PA12) | Before bench wiring (week 2) |
+| O-06-1 | **Done 2026-11-02**: §3 checked against UM1724 Rev 14 (headers, solder bridges) and the Mbed NUCLEO_L476RG pin map (alternate functions: SPI1/SPI2 AF5, SPI3 AF6, USART1/2/3 AF7, PA12 = USART1_DE). Found: no HSE on this Nucleo (§3.1 fixed); PB1 double use in the USART3 fallback (noted); PB4 is NJTRST with a pull-up at reset, so the firmware clears it. ⚠ Not yet cross-read against the L476 datasheet itself (ST's site didn't serve it) | Before bench wiring (week 2) |
 | O-06-2 | **Done: Ra-01SH (D-036).** Still open: whether its CE/FCC certification helps NTC type approval (Q10) | M1 sign-off |
 | O-06-3 | In-box isolation measurement results (§11) | Before final board layout |
 | O-06-4 | Cabinet type and location (pole-top vs ground cabinet) decide coax lengths and enclosure size | Hardware developer |
