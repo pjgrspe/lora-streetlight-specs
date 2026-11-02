@@ -31,8 +31,8 @@ Frame format, addressing, keys and type numbers: [00](00-common-frame-and-conven
 | `SCANNING` | Listening for a cell BEACON (§3) | `JOINING` when a BEACON from the site's NetID is heard |
 | `JOINING` | Sending JOIN_REQ in the contention window (§4) | `JOINED` on JOIN_ACC; `SCANNING` after 8 failed attempts on this Slave |
 | `JOINED` | Reporting in its slot, following commands | `REJOINING` after reboot or on request; `FALLBACK` on Slave loss |
-| `REJOINING` | Holds a slot from before; sends REJOIN_REQ in that slot (§5) | `JOINED` on JOIN_ACC; `JOINING` after 3 failed cycles |
-| `FALLBACK` | Lost its Slave (§11). Runs its own schedule. Keeps listening | `JOINED` when its Slave's BEACON returns |
+| `REJOINING` | Holds a slot from before; sends REJOIN_REQ in that slot (§5) | `JOINED` on JOIN_ACC; `JOINING` after 3 failed cycles; `FALLBACK` on Slave loss if it has joined since boot (D-037) |
+| `FALLBACK` | Lost its Slave (§11). Runs its own schedule. Keeps listening | `JOINED` when its Slave's BEACON returns; `REJOINING` instead if it entered `FALLBACK` from `REJOINING` (D-037) |
 
 **The lamp is controlled in every state** by the device's own schedule (§10). The radio state never leaves the lamp uncontrolled.
 
@@ -332,7 +332,7 @@ If the Slave gets no CMD_ACK, it retries up to 3 times, 2 s apart, within `not_a
 | Moved for single-channel mode, then a BEACON without `single_channel_mode` | Return to the home channel. No rejoin needed |
 | BEACON heard on the other channel without `single_channel_mode` (and not moved for single-channel mode) | The Slave is fine but this device's link isn't. Send REJOIN_REQ in the **contention window** of that channel (never in its own slot time, which belongs to another device there); the Slave assigns a new home channel and slot on that channel |
 | 3 consecutive cycles with no BEACON on either channel | Enter **`FALLBACK`**: set `fallback_mode`, clear overrides, run the local schedule (§12.2). Keep listening: alternate the two section channels every cycle. Every 30–60 min (random, so a cell doesn't rescan in step) scan channels 1–12, one cycle each (§3). A Slave other than its own is tried only if its BEACON shows the commissioning window open (it can't take a new UID otherwise, §4.2), and only once per scan: no JOIN_ACC, back to `FALLBACK` |
-| BEACON from its own Slave again | Leave `FALLBACK`, send REJOIN_REQ in its slot if the slot map is unchanged, send `FALLBACK_EXITED`. If the BEACON came on the other channel (the device was alternating), listen on the home channel for one more cycle first; ask for a new slot there only if the home channel stays silent |
+| BEACON from its own Slave again | Leave `FALLBACK`, send REJOIN_REQ in its slot if the slot map is unchanged, send `FALLBACK_EXITED`. A device that entered `FALLBACK` in the middle of a rejoin finishes that rejoin first: its slot isn't settled (D-037). If the BEACON came on the other channel (the device was alternating), listen on the home channel for one more cycle first; ask for a new slot there only if the home channel stays silent |
 
 ## 12. Configuration, swap and driver replacement
 
