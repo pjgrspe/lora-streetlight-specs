@@ -30,7 +30,7 @@ Each requirement has an ID (`HW-xx`), a level (MUST / SHOULD) and a verification
 
 | ID | Requirement | Level | Verify |
 |---|---|---|---|
-| HW-10 | Radio on the gateways: **Semtech SX1262, Ai-Thinker Ra-01SH** (803–930 MHz, up to +22 dBm, IPEX connector) (D-036). The devices stay SX1276 (03); SX126x and SX127x radios talk LoRa to each other. **Not** Ra-01/Ra-02/Ra-01S (433 MHz) and not Ra-01SH-P (+29 dBm PA) | MUST | I, T (the chip reports standby and the sync word reads back 0x14 0x24) |
+| HW-10 | Radio on the gateways: **Semtech SX1262, Ai-Thinker Ra-01SH** (803–930 MHz, up to +22 dBm, IPEX connector) (D-036), the same module as the devices (03). **Not** Ra-01/Ra-02/Ra-01S (433 MHz) and not Ra-01SH-P (+29 dBm PA) | MUST | I, T (the chip reports standby and the sync word reads back 0x14 0x24) |
 | HW-11 | SPI-transparent modules only. No AT-command modules | MUST | I |
 | HW-12 | TCXO-equipped module variant on gateways. ⚠ The Ra-01SH has a crystal, not a TCXO: measure the frequency error at cabinet temperature on the bench | SHOULD | I, T |
 | HW-13 | Each radio has its own **NSS, NRESET, BUSY and DIO1** lines to the MCU. DIO2 drives the module's antenna switch; the module's TXEN and RXEN pins stay **unconnected** (TXEN is on the DIO2 net). DIO3 not used | MUST | I |
@@ -167,7 +167,7 @@ Open question Q24: how badly does one radio transmitting deafen the other radios
 2. Make U1 transmit continuously at its configured power, on tier-1 channel 0, while the test transmitter sends to D2 on a cell channel. Record D2 PER and RSSI.
 3. Repeat with U1 on channel 13, and with D1 transmitting on the section's other cell channel.
 4. Repeat for antenna spacings of 0.3 m, 0.6 m and 1 m, and vertical vs side by side.
-5. Measure antenna-to-antenna coupling directly with a signal generator and spectrum analyser (or a second SX1276 reading RSSI) for each spacing.
+5. Measure antenna-to-antenna coupling directly with a signal generator and spectrum analyser (or a second radio reading RSSI) for each spacing.
 
 **Decision.**
 

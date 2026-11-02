@@ -15,7 +15,7 @@ Frame format, addressing, keys and type numbers: [00](00-common-frame-and-conven
 
 ## 1. Summary for the device developer
 
-- Your device has **one SX1276 radio**, mains power, and **listens all the time** except while transmitting.
+- Your device has **one SX1262 radio** (Ai-Thinker Ra-01SH, D-036), mains power, and **listens all the time** except while transmitting.
 - It finds its Slave by listening for a **cell BEACON**, joins once, and is given a **NodeID, a channel and a slot**.
 - **Every cycle (default 120 s) it sends one REPORT in its slot.** No polling.
 - Commands arrive any time in the downlink window. Group commands carry **`execute_at`**: all devices switch at that second.
@@ -63,7 +63,7 @@ Header: `SRC = (GwID << 8) | 0xFE` (unjoined), `DST = GwID << 8`, `DIR = 0`, `PR
 - The contention window is cell time 0.60–1.60 s, on both channels ([04 §6.2](04-channel-plan-and-airtime.md)). It has **3 sub-slots of 333 ms**.
 - The device sends on the channel where it heard the BEACON, at the start of a randomly chosen sub-slot, **after a CAD check** shows the channel clear (if busy, it skips this cycle).
 - **Backoff:** after the k-th failure, wait a random 0 … 2^min(k,4) − 1 cycles before the next attempt.
-- **Randomness** comes from the SX1276 wideband RSSI register (LSBs of `RegRssiWideband`, collected 32 times), seeded with the UID. The library does this.
+- **Randomness** comes from the SX1262 noise generator (`RandomNumberGen` registers, read while receiving), seeded with the UID. The library does this.
 - A new (never joined) UID is accepted only while the Slave's **commissioning window is open** (BEACON flag bit1). A UID that has joined before may join any time.
 
 ### 4.3 JOIN_ACC (TYPE `0x08`), Slave → device, 45 bytes
@@ -374,13 +374,13 @@ Protocol-side obligations are numbered DP-n. The fail-safe obligations DD-1 to D
 | DP-5 | **Honour the command rules** | §10.4, using the library's callbacks |
 | DP-6 | **Measure** | Power, voltage, current, energy and temperature where the hardware can; report `0xFFFF…` where it can't. Energy is cumulative and persisted |
 | DP-7 | **Persist** | NodeID, slot, home channel, cell parameters, `cell_key`, `group_mask`, schedule, fail-safe levels, `dev_nonce` (written before each JOIN_REQ / REJOIN_REQ is sent), energy and lamp hours. No frame-counter high-water mark: every boot rejoins with new session keys ([00](00-common-frame-and-conventions.md) §6.3). Use a wear-aware scheme: the F103 flash takes ~10 k erase cycles |
-| DP-8 | **Give the library the hardware** | SPI to the SX1276, NSS, NRESET and a busy-wait delay, through `lp_sx1276_hw_t`; a DIO0 interrupt that records the time; a wrapping millisecond counter. The firmware stores `lp_dev_persist_t` itself (DP-7). See §14.2 |
+| DP-8 | **Give the library the hardware** | SPI to the SX1262, NSS, NRESET, the BUSY pin and a busy-wait delay, through `lp_sx1262_hw_t`; a DIO1 interrupt that records the time; a wrapping millisecond counter. On the Ra-01SH, leave TXEN and RXEN unconnected (DIO2 drives the antenna switch). The firmware stores `lp_dev_persist_t` itself (DP-7). See §14.2 |
 | DP-9 | **Radio power** | Set conducted power so that **EIRP ≤ 16 dBm** for the antenna and cable fitted (conducted = 16 − antenna gain + cable loss) |
 | DP-10 | **Timing** | Call the library's poll function at least every 5 ms, and service DIO interrupts within 1 ms, so slot TX starts within ±20 ms and CMD_ACKs within 300 ms |
 | DP-11 | **Watchdog** | Independent watchdog enabled. A reboot must leave the lamp in a safe state (DALI `POWER ON LEVEL` covers the gap) |
 | DP-12 | **Provisioning** | On the bench: store UID record, `DevKey` (or the data to derive it) and `tz_offset_min` (+480) in protected flash; enable readout protection level 1. Never ship a default key |
 
-**The library provides:** frame encode/decode, AES-128 CMAC/CTR, keys and session derivation, replay and duplicate windows, channel scan, join/rejoin/backoff, BEACON tracking and clock offset, slot timing, channel failover, event retry, command parsing and dispatch to callbacks, CMD_ACK, airtime checks, CAD before contention frames, the SX1276 driver (behind `lp_port_t`, written from the Semtech datasheet).
+**The library provides:** frame encode/decode, AES-128 CMAC/CTR, keys and session derivation, replay and duplicate windows, channel scan, join/rejoin/backoff, BEACON tracking and clock offset, slot timing, channel failover, event retry, command parsing and dispatch to callbacks, CMD_ACK, airtime checks, CAD before contention frames, the SX1262 driver (behind `lp_port_t`, written from the Semtech datasheet).
 
 ## 14. Device-role library
 
@@ -388,20 +388,20 @@ Protocol-side obligations are numbered DP-n. The fail-safe obligations DD-1 to D
 
 **≤ 16 KB flash, ≤ 3 KB RAM**, on STM32F103 (Cortex-M3, no FPU). Bare metal, no RTOS, no malloc, no floating point. C99. Portable to the device developer's final board.
 
-Measured on the Cortex-M3 (arm-none-eabi-gcc `-Os`, unused code removed by the linker), 2026-10-29: the library with its SX1276 driver, events, deferred results and the FALLBACK rescan is **10.4 KB flash**. A device holds **1.1 KB RAM** of library state, plus ⚠ about 0.9 KB of stack at the deepest point (estimated).
+Measured on the Cortex-M3 (arm-none-eabi-gcc `-Os`, unused code removed by the linker), 2026-11-02: the library with its SX1262 driver, events, deferred results and the FALLBACK rescan is **10.7 KB flash**. A device holds **1.1 KB RAM** of library state, plus ⚠ about 0.9 KB of stack at the deepest point (estimated).
 
 ### 14.2 API
 
-The API is the reference code, not a sketch: `lora/lp_dev.h`, `lora/lp_port.h` and `lora/lp_sx1276.h` in `lora-streetlight/protocol/`. Its README shows the wiring.
+The API is the reference code, not a sketch: `lora/lp_dev.h`, `lora/lp_port.h` and `lora/lp_sx1262.h` in `lora-streetlight/protocol/`. Its README shows the wiring.
 
 | Who | Calls | When |
 |---|---|---|
-| Firmware → library | `lp_sx1276_init()`, `lp_sx1276_port()`, `lp_dev_init()` | Boot |
+| Firmware → library | `lp_sx1262_init()`, `lp_sx1262_port()`, `lp_dev_init()` | Boot |
 | Firmware → library | `lp_dev_poll(now_ms)` | At the deadline it returns, and at least every 5 ms (DP-10) |
-| Firmware → library | `lp_sx1276_service()`, then `lp_dev_on_rx()` or `lp_dev_on_tx_done()` with the time the DIO0 interrupt recorded | After each DIO0 interrupt |
+| Firmware → library | `lp_sx1262_service()`, then `lp_dev_on_rx()` or `lp_dev_on_tx_done()` with the time the DIO1 interrupt recorded | After each DIO1 interrupt |
 | Firmware → library | `lp_dev_persist_dirty()` | After each call above; store `lp_dev_persist_t` when it returns 1 (DP-7) |
 | Library → firmware | `lp_dev_app_t`: `execute`, `build_report`, `levels` | Commands, the REPORT, CMD_ACK contents |
-| Library → board | `lp_sx1276_hw_t`: `select`, `xfer`, `reset`, `delay_ms` | SPI and pins (DP-8) |
+| Library → board | `lp_sx1262_hw_t`: `select`, `xfer`, `reset`, `delay_ms`, `busy` | SPI and pins (DP-8) |
 
 | Firmware → library | `lp_dev_event()` | An EVENT (§9); the library sends and retries it |
 | Firmware → library | `lp_dev_set_time()` | At boot, from a valid RTC (05 DD-1) |

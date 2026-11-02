@@ -48,7 +48,7 @@ This document holds everything the other specs share: units and byte order, addr
 | Power | `uint16`, 0.1 W (device); `int32`, W (meter totals) |
 | Energy | `uint32`, Wh, cumulative and monotonic |
 | Temperature | `int8` (radio) / `int16` (Modbus), °C |
-| RSSI / SNR | `int8` dBm / `int8` 0.25 dB steps (SX1276 native) |
+| RSSI / SNR | `int8` dBm / `int8` 0.25 dB steps (as the radio reports SNR) |
 | Not available | All bits set for that width (`0xFF`, `0xFFFF`, `0xFFFFFFFF`), or `0x7F…` for signed fields |
 
 ### 2.3 Identity
@@ -91,7 +91,7 @@ Examples: Master `0x000`. Slave of section 3 `0x300`. Device 17 in section 3 `0x
 
 | Setting | Value |
 |---|---|
-| Radio | Devices: Semtech SX1276, 915 MHz module variants only. Gateways: SX1262 (Ra-01SH, D-036). Both talk LoRa to each other; sync word 0x12 on the SX1276 is 0x1424 on the SX1262 |
+| Radio | Semtech SX1262, Ai-Thinker Ra-01SH module (803–930 MHz), on every gateway and device (D-036). Sync word 0x12 is written as 0x1424 in the SX1262 registers |
 | Modulation | LoRa, **125 kHz**, coding rate **4/5**, **explicit header**, **PHY CRC on** |
 | Preamble | 8 symbols |
 | Sync word | `0x12` (private). Configurable per site. Never `0x34` (LoRaWAN) |
