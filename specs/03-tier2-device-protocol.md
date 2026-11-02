@@ -112,7 +112,7 @@ After a power cut, every device in the section boots at once. To avoid all of th
 |---|---|---|
 | 0 | 2 | `dev_nonce` (incremented first) |
 | 2 | 2 | `fw_version` |
-| 4 | 1 | `reset_cause` (1 power-on, 2 brown-out, 3 watchdog, 4 software, 5 pin) |
+| 4 | 1 | `reset_cause` (1 power-on, 2 brown-out, 3 watchdog, 4 software, 5 pin; **0 = not a restart**). Only the first REJOIN_REQ after a boot carries the real cause; a rejoin after lost beacons, a channel move or leaving `FALLBACK` sends 0 (D-035) |
 
 ## 6. Device status bits (u16)
 
@@ -240,7 +240,7 @@ Forwarded unchanged by the Slave in tier-1 EVENTs ([02 §9](02-tier1-protocol.md
 
 | Code | Name | Severity | `data` |
 |---|---|---|---|
-| `0x40` | `DEVICE_RESTARTED` | warning | reset cause u8. **Raised by the Slave** when it accepts the device's REJOIN_REQ (which carries the reset cause), never sent by the device: after a mains restore every device would send it in the same contention window |
+| `0x40` | `DEVICE_RESTARTED` | warning | reset cause u8. **Raised by the Slave** when it accepts a REJOIN_REQ whose reset cause is not 0 (§5), never sent by the device: after a mains restore every device would send it in the same contention window |
 | `0x41` | `LAMP_FAULT` | alarm | — |
 | `0x42` | `DRIVER_FAULT` | alarm | — |
 | `0x43` | `DALI_BUS_FAULT` | alarm | fault code u8 (3 or 4) |
