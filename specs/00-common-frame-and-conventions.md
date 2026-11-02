@@ -91,7 +91,7 @@ Examples: Master `0x000`. Slave of section 3 `0x300`. Device 17 in section 3 `0x
 
 | Setting | Value |
 |---|---|
-| Radio | Semtech SX1276, 915 MHz module variants only |
+| Radio | Devices: Semtech SX1276, 915 MHz module variants only. Gateways: SX1262 (Ra-01SH, D-036). Both talk LoRa to each other; sync word 0x12 on the SX1276 is 0x1424 on the SX1262 |
 | Modulation | LoRa, **125 kHz**, coding rate **4/5**, **explicit header**, **PHY CRC on** |
 | Preamble | 8 symbols |
 | Sync word | `0x12` (private). Configurable per site. Never `0x34` (LoRaWAN) |

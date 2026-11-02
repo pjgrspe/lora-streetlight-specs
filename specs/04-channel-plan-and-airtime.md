@@ -37,7 +37,7 @@ All of these are configuration values with a compile-time ceiling. A different N
 | 5 | 916.2 | 12 | 917.6 |
 | 6 | 916.4 | 13 | 917.8 |
 
-`f(ch) = 915.2 MHz + ch × 0.2 MHz`. The SX1276 frequency register value is `Frf = f / 61.03515625 Hz`.
+`f(ch) = 915.2 MHz + ch × 0.2 MHz`. The SX1276 frequency register value is `Frf = f / 61.03515625 Hz`; the SX1262 (gateways, D-036) takes `Frf = f / 0.95367431640625 Hz`.
 
 ## 3. Channel assignment
 

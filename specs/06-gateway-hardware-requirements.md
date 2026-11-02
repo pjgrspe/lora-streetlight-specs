@@ -9,7 +9,7 @@
 | **Reviewers** | Gateway hardware developer (signs, also for the client) |
 | **Status** | Draft. Not frozen |
 
-What the gateway hardware must provide so the Master and Slave firmware works as specified. It covers the development phase (client-supplied NUCLEO-L476RG boards + SX1276 modules) and the final board. Radio settings and channels are in [00](00-common-frame-and-conventions.md) and [04](04-channel-plan-and-airtime.md).
+What the gateway hardware must provide so the Master and Slave firmware works as specified. It covers the development phase (client-supplied NUCLEO-L476RG boards + Ra-01SH SX1262 modules, D-036) and the final board. Radio settings and channels are in [00](00-common-frame-and-conventions.md) and [04](04-channel-plan-and-airtime.md).
 
 Each requirement has an ID (`HW-xx`), a level (MUST / SHOULD) and a verification method: **I** = inspection (schematic, BOM, layout), **T** = bench test, **M** = measurement.
 
@@ -30,15 +30,15 @@ Each requirement has an ID (`HW-xx`), a level (MUST / SHOULD) and a verification
 
 | ID | Requirement | Level | Verify |
 |---|---|---|---|
-| HW-10 | Radio: **Semtech SX1276, 915 MHz variant** (e.g. HopeRF RFM95W-915, Ai-Thinker Ra-01H). **Not** Ra-01/Ra-02 (433 MHz) | MUST | I, T (RegVersion 0x42 reads 0x12) |
+| HW-10 | Radio on the gateways: **Semtech SX1262, Ai-Thinker Ra-01SH** (803–930 MHz, up to +22 dBm, IPEX connector) (D-036). The devices stay SX1276 (03); SX126x and SX127x radios talk LoRa to each other. **Not** Ra-01/Ra-02/Ra-01S (433 MHz) and not Ra-01SH-P (+29 dBm PA) | MUST | I, T (the chip reports standby and the sync word reads back 0x14 0x24) |
 | HW-11 | SPI-transparent modules only. No AT-command modules | MUST | I |
-| HW-12 | TCXO-equipped module variant on gateways | SHOULD | I |
-| HW-13 | Each radio has its own **NSS, NRESET, DIO0 and DIO1** lines to the MCU. DIO2/DIO3 optional | MUST | I |
+| HW-12 | TCXO-equipped module variant on gateways. ⚠ The Ra-01SH has a crystal, not a TCXO: measure the frequency error at cabinet temperature on the bench | SHOULD | I, T |
+| HW-13 | Each radio has its own **NSS, NRESET, BUSY and DIO1** lines to the MCU. DIO2 drives the module's antenna switch; the module's TXEN and RXEN pins stay **unconnected** (TXEN is on the DIO2 net). DIO3 not used | MUST | I |
 | HW-14 | **The two radios of a pair are on different SPI buses** (Master: R1 / R2. Slave: U1 / U2 and D1 / D2). A stuck MISO on one bus can't take out both radios of a pair | MUST | I, T (hold one bus's MISO low: the other radio still works) |
 | HW-15 | Each radio of a pair has its **own fused rail or LDO**. A shorted radio can't pull down its partner | MUST | I, T |
 | HW-16 | Each radio has its **own antenna connector** (u.FL or SMA on the module), own coax run and own bulkhead | MUST | I |
 | HW-17 | Radio NRESET lines are driven by the MCU (the firmware resets a hung radio) | MUST | T |
-| HW-18 | Each radio's DIO0/DIO1 go to pins with **distinct EXTI line numbers** (EXTI lines are shared across ports) | MUST | I |
+| HW-18 | Each radio's DIO1 (its interrupt) goes to a pin with a **distinct EXTI line number** (EXTI lines are shared across ports). BUSY is read as a plain input | MUST | I |
 
 ## 3. Proposed pin and bus allocation (NUCLEO-L476RG)
 
@@ -57,11 +57,11 @@ Each requirement has an ID (`HW-xx`), a level (MUST / SHOULD) and a verification
 | LSE | PC14 / PC15 | 32.768 kHz RTC crystal | Reserved |
 | HSE | PH0 / PH1 | Main clock (ST-LINK MCO on Nucleo) | Reserved |
 
-Alternative for RS485 if USART1 conflicts: USART3, PC4 TX / PC5 RX / PB1 DE (then move U2 DIO1 off PC5).
+Alternative for RS485 if USART1 conflicts: USART3, PC4 TX / PC5 RX / PB1 DE (then move U2 BUSY off PC5).
 
 ### 3.2 Radio control lines
 
-| Radio | Bus | NSS | NRESET | DIO0 (EXTI) | DIO1 (EXTI) |
+| Radio | Bus | NSS | NRESET | DIO1, interrupt (EXTI) | BUSY |
 |---|---|---|---|---|---|
 | R1 / U1 | SPI1 | PA4 | PA8 | PC0 (0) | PC1 (1) |
 | D1 | SPI1 | PB6 | PC8 | PC2 (2) | PC3 (3) |
@@ -183,7 +183,7 @@ Results are recorded in the specs repo with photos of the antenna arrangement.
 | Item | Qty | For |
 |---|---|---|
 | NUCLEO-L476RG | 3 (1 Master + 2 Slaves) | Gateway firmware |
-| SX1276 915 MHz modules with antennas | 10 (2 + 4 + 4) | Gateway radios |
+| Ra-01SH (SX1262) modules with 915 MHz antennas | 10 (2 + 4 + 4) | Gateway radios (D-036) |
 | SPI breakout for FRAM MB85RS256B + NOR W25Q64JV | 3 | Storage |
 | Isolated USB-RS485 adapter + 3.3 V RS485 transceiver board for the Master | 1 + 1 | Modbus link |
 | Server PC (client-supplied) | 1 | Monitoring server |
@@ -202,7 +202,7 @@ Results are recorded in the specs repo with photos of the antenna arrangement.
 | # | Item | Needed by |
 |---|---|---|
 | O-06-1 | ⚠ Verify every pin in §3 against UM1724 and the L476RG datasheet (alternate functions, SB defaults, LD2 on PA5, USB on PA11/PA12) | Before bench wiring (week 2) |
-| O-06-2 | Exact radio module part: RFM95W-915 vs Ra-01H vs a TCXO variant; and whether its certification helps NTC type approval (Q10) | M1 sign-off |
+| O-06-2 | **Done: Ra-01SH (D-036).** Still open: whether its CE/FCC certification helps NTC type approval (Q10) | M1 sign-off |
 | O-06-3 | In-box isolation measurement results (§11) | Before final board layout |
 | O-06-4 | Cabinet type and location (pole-top vs ground cabinet) decide coax lengths and enclosure size | Hardware developer |
 | O-06-5 | Earthing resistance achievable at the site | Survey |
