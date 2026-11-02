@@ -18,7 +18,7 @@ How the Master and the Slaves talk over LoRa: joining, the cycle, summaries and 
 | Master | `0x000` | Owns the clock and the cycle. Sends the BEACON and the standby HEARTBEAT. Accepts slave joins. Turns server jobs into commands. Collects summaries, detail and events into the Modbus image ([01](01-modbus-register-map.md)) |
 | Slave n | `n << 8` (n = 1–14) | Joins the Master. Sends a SUMMARY in its slot every cycle, plus detail and events. Forwards commands into its cell ([03](03-tier2-device-protocol.md)). Runs its section on its own when the Master is gone |
 
-The number of slaves is configured on the Master (`slave_count`, 1–14). A slave's GwID is set in its configuration at commissioning. Slots exist only for configured slaves.
+Which slaves exist is configured on the Master in `cfg_section_mask` ([01](01-modbus-register-map.md) §8.1): bit s set = slave with GwID s expected (1–14). A slave's GwID is set in its configuration at commissioning. Slots exist only for configured slaves.
 
 ## 2. Radios and channel use
 
