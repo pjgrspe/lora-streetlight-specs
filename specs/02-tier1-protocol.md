@@ -280,7 +280,9 @@ Unicast to `n << 8`, or broadcast to `0xF00` (all slaves, MIC/encrypted with `Ne
 | `0x0E` | `SET_FAILSAFE_LEVELS` | `power_on_level` u8 · `system_failure_level` u8 | P2 |
 | `0x0F` | `FORCE_FAILOVER` | `mode` u8: 0 back to primary, 1 force standby | P1 |
 
-### 11.2 CMD_ACK (TYPE `0x05`), slave → Master, 15 bytes
+### 11.2 CMD_ACK (TYPE `0x05`), slave → Master, 15 bytes per answer
+
+One frame carries **1 to 4 answers** back to back, 15 bytes each, finals first (D-039). A frame with one answer is the 15-byte layout below.
 
 Sent once when the slave accepts the command, and again when the job ends in its section. Encrypted with `AppSKey`.
 
@@ -295,6 +297,8 @@ Sent once when the slave accepts the command, and again when the job ends in its
 | 7 | 8 | `fail_bitmap` | u64, bit k = NodeID k not confirmed |
 
 A slave confirms a broadcast command from its devices' next REPORTs (`last_cmd_fcnt_lo` and `level_actual`, [03](03-tier2-device-protocol.md)). It sends the final CMD_ACK when every target has confirmed, or **2 cycles after `execute_at`**, whichever is first. The final CMD_ACK goes in the slave's slot at +0.75, or in the contention window if the job is P0.
+
+**Progress (D-039):** before the final, whenever more devices have confirmed, the slave sends a CMD_ACK with `job_state` 3 (DISPATCHING), the counts so far and `fail_bitmap` = not confirmed yet. The Master shows it in the job's progress at once; only a final ends the job. The slave plans its slot frame 0.4 s before its tier-1 slot, after its devices' slots (04 §6.3), so the SUMMARY and these answers carry the same cycle's reports. Answers queue, finals first, up to 4 per slot frame; a newer answer to a command replaces a resend of an older one, and goes ahead of a DETAIL resend. **A newer level command replaces older level jobs whose devices it covers** (same target, its section, or the site): the slave drops them and their answers, and the Master closes them as `EXPIRED` and stops resending them; the server shows them as replaced.
 
 ### 11.3 From a Modbus job to radio frames
 

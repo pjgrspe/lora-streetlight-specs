@@ -194,7 +194,7 @@ Sent every cycle on both channels: channel A at cell time 0.00, channel B at 0.2
 | 10 | 1 | `config_ver` | Section configuration version. A device whose stored value differs expects a configuration push |
 | 11 | 4 | `event_ack_bitmap` | Present only if flag bit3. Each beacon acknowledges the EVENTs received **on its own channel** last cycle: bit (slot mod 32) for the sending device. In single-channel mode the surviving channel's beacon covers every device on it, so slots k and k + 32 share a bit; if both sent an EVENT in the same cycle, one may take the other's ACK (⚠ rare; its state is still in every REPORT). The beacon on the failed channel can't be heard, so it can't carry them |
 
-**Timing from the BEACON:** the device timestamps RxDone, computes `cell_start = beacon_time − beacon_offset_ms` in Slave time, and keeps an EWMA of its clock offset (α = 1/4). Devices need slot accuracy of ±20 ms. Drift between two ±20 ppm crystals over one 120 s cycle is under 5 ms.
+**Timing from the BEACON:** the device timestamps RxDone, computes `cell_start = beacon_time − beacon_offset_ms` in Slave time, and keeps an EWMA of its clock offset (α = 1/4). **If the offset is more than 1 s off, it steps instead**, as a slave does ([02 §13](02-tier1-protocol.md)), and moves a command already waiting for its `execute_at` by the same step (D-038). Devices need slot accuracy of ±20 ms. Drift between two ±20 ppm crystals over one 120 s cycle is under 5 ms.
 
 ## 9. EVENT (TYPE `0x03`), device → Slave
 
