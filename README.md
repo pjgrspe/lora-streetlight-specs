@@ -6,16 +6,18 @@ The interface contracts for the LoRa smart street lighting system. These documen
 
 | # | Spec | What it fixes | Signed by | Version | Status |
 |---|---|---|---|---|---|
-| 00 | [Common frame format and conventions](specs/00-common-frame-and-conventions.md) | Byte order, units, addressing, the frame format and security layer used on both radio tiers | All | 0.1 | Draft |
-| 01 | [Modbus register map](specs/01-modbus-register-map.md) + [CSV](register-map/register-map.csv) | Every register the Master exposes to the Server | Hardware developer (for the client) | 0.1 | Draft |
-| 02 | [Tier-1 protocol](specs/02-tier1-protocol.md) | Master ↔ Slave Gateways radio protocol | Hardware developer (for the client) | 0.1 | Draft |
-| 03 | [Tier-2 device protocol](specs/03-tier2-device-protocol.md) | Slave Gateway ↔ devices radio protocol, and what device firmware must do | **Device developer**, hardware developer (for the client) | 0.1 | Draft |
-| 04 | [Channel plan and airtime budget](specs/04-channel-plan-and-airtime.md) | Frequencies, spreading factors, cycle timing, duty-cycle proof | Hardware developer (for the client) | 0.1 | Draft, provisional until NTC answers |
-| 05 | [Fail-safe behaviour](specs/05-fail-safe-behaviour.md) | What the lights do in every failure case | **Hardware developer (for the client), device developer** | 0.1 | Draft |
-| 06 | [Gateway hardware requirements](specs/06-gateway-hardware-requirements.md) | What the gateway hardware must provide | **Gateway hardware developer** | 0.1 | Draft |
-| 07 | [Server data model and requirements](specs/07-server-data-model.md) | What the Local Monitoring Server stores, shows and controls | Hardware developer (for the client) | 0.1 | Draft |
+| 00 | [Common frame format and conventions](specs/00-common-frame-and-conventions.md) | Byte order, units, addressing, the frame format and security layer used on both radio tiers | All | 0.9 | Release candidate |
+| 01 | [Modbus register map](specs/01-modbus-register-map.md) + [CSV](register-map/register-map.csv) | Every register the Master exposes to the Server | Hardware developer (for the client) | 0.9 | Release candidate |
+| 02 | [Tier-1 protocol](specs/02-tier1-protocol.md) | Master ↔ Slave Gateways radio protocol | Hardware developer (for the client) | 0.9 | Release candidate |
+| 03 | [Tier-2 device protocol](specs/03-tier2-device-protocol.md) | Slave Gateway ↔ devices radio protocol, and what device firmware must do | **Device developer**, hardware developer (for the client) | 0.9 | Release candidate |
+| 04 | [Channel plan and airtime budget](specs/04-channel-plan-and-airtime.md) | Frequencies, spreading factors, cycle timing, duty-cycle proof | Hardware developer (for the client) | 0.9 | Release candidate, provisional until NTC answers |
+| 05 | [Fail-safe behaviour](specs/05-fail-safe-behaviour.md) | What the lights do in every failure case | **Hardware developer (for the client), device developer** | 0.9 | Release candidate |
+| 06 | [Gateway hardware requirements](specs/06-gateway-hardware-requirements.md) | What the gateway hardware must provide | **Gateway hardware developer** | 0.9 | Release candidate |
+| 07 | [Server data model and requirements](specs/07-server-data-model.md) | What the Local Monitoring Server stores, shows and controls | Hardware developer (for the client) | 0.9 | Release candidate |
 
 Decisions made along the way are logged in [DECISIONS.md](DECISIONS.md).
+
+**Signing now? See the [M1 sign-off checklist](M1-CHECKLIST.md):** what changed since the last review, the questions left for each party, and the default used if there's no answer.
 
 **New here? Start with the [system guide](guide/system-guide.html)** (download it and open it in a browser): diagrams of how everything fits together, each pointing to the spec that holds the details.
 

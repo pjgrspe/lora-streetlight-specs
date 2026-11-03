@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Spec** | 04 — Channel plan and airtime budget |
-| **Version** | 0.1 (draft for review) |
+| **Version** | 0.9 (release candidate for spec-v1.0, review r2) |
 | **Date** | 2026-11-03 |
 | **Owner** | pgorospe |
 | **Reviewers** | Gateway hardware developer (for the client), device developer |
-| **Status** | Draft. Provisional until NTC confirms the radio limits (SOW assumption A3) |
+| **Status** | Release candidate. Provisional until NTC confirms the radio limits (SOW assumption A3) |
 
 Which frequencies each link uses, which spreading factors, the cycle timing on both tiers, and proof that the traffic fits the regulatory limits. Shared conventions are in [00](00-common-frame-and-conventions.md).
 

@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Spec** | 06 — Gateway hardware requirements |
-| **Version** | 0.1 (draft for review) |
-| **Date** | 2026-10-20 |
+| **Version** | 0.9 (release candidate for spec-v1.0, review r2) |
+| **Date** | 2026-11-03 |
 | **Owner** | pgorospe |
 | **Reviewers** | Gateway hardware developer (signs, also for the client) |
-| **Status** | Draft. Not frozen |
+| **Status** | Release candidate. Not frozen until spec-v1.0 is signed |
 
 What the gateway hardware must provide so the Master and Slave firmware works as specified. It covers the development phase (client-supplied NUCLEO-L476RG boards + Ra-01SH SX1262 modules, D-036) and the final board. Radio settings and channels are in [00](00-common-frame-and-conventions.md) and [04](04-channel-plan-and-airtime.md).
 
@@ -203,7 +203,7 @@ Results are recorded in the specs repo with photos of the antenna arrangement.
 | # | Item | Needed by |
 |---|---|---|
 | O-06-1 | **Done 2026-11-02**: §3 checked against UM1724 Rev 14 (headers, solder bridges) and the Mbed NUCLEO_L476RG pin map (alternate functions: SPI1/SPI2 AF5, SPI3 AF6, USART1/2/3 AF7, PA12 = USART1_DE). Found: no HSE on this Nucleo (§3.1 fixed); PB1 double use in the USART3 fallback (noted); PB4 is NJTRST with a pull-up at reset, so the firmware clears it. ⚠ Not yet cross-read against the L476 datasheet itself (ST's site didn't serve it) | Before bench wiring (week 2) |
-| O-06-2 | **Done: Ra-01SH (D-036).** Still open: whether its CE/FCC certification helps NTC type approval (Q10) | M1 sign-off |
+| O-06-2 | **Done: Ra-01SH (D-036).** Still open: whether its CE/FCC certification helps NTC type approval (Q10) | Before field use |
 | O-06-3 | In-box isolation measurement results (§11) | Before final board layout |
 | O-06-4 | Cabinet type and location (pole-top vs ground cabinet) decide coax lengths and enclosure size | Hardware developer |
 | O-06-5 | Earthing resistance achievable at the site | Survey |

@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Spec** | 07 — Local Monitoring Server data model, dashboard and control requirements |
-| **Version** | 0.1 (draft for review) |
-| **Date** | 2026-10-29 |
+| **Version** | 0.9 (release candidate for spec-v1.0, review r2) |
+| **Date** | 2026-11-03 |
 | **Owner** | pgorospe |
 | **Reviewers** | Gateway hardware developer (for the client) |
-| **Status** | Draft. Not frozen |
+| **Status** | Release candidate. Not frozen until spec-v1.0 is signed |
 
 What the Local Monitoring Server stores, what operators see, and what they can control. The server reads the Master over Modbus RTU ([01](01-modbus-register-map.md)). Conventions are in [00](00-common-frame-and-conventions.md), and the timing that limits how fresh the data can be is in [04](04-channel-plan-and-airtime.md).
 
@@ -266,7 +266,7 @@ Run against the bench network (Master, at least two slaves, real and simulated d
 
 | # | Item | Needed by |
 |---|---|---|
-| O-07-1 | Client PC: OS (Windows or Linux), CPU, RAM, disk; whether it can run Docker | M1 sign-off |
+| O-07-1 | Client PC: OS (Windows or Linux), CPU, RAM, disk; whether it can run Docker | M5 (installation) |
 | O-07-2 | Tariff: metered or flat-rate streetlight service (decides whether peso savings are shown) | M5 |
 | O-07-3 | Dim floor per road class (DOE/DPWH lux) ⚠ unverified | M5 |
 | O-07-4 | Pole list with asset IDs, sections and (optionally) coordinates and luminaire model / nominal power | Before commissioning |

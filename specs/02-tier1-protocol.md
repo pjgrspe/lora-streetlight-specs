@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Spec** | 02 — Tier-1 protocol (Master ↔ Slave Gateways) |
-| **Version** | 0.1 (draft for review) |
-| **Date** | 2026-10-29 |
+| **Version** | 0.9 (release candidate for spec-v1.0, review r2) |
+| **Date** | 2026-11-03 |
 | **Owner** | pgorospe |
 | **Reviewers** | Gateway hardware developer (for the client) |
-| **Status** | Draft. Not frozen |
+| **Status** | Release candidate. Not frozen until spec-v1.0 is signed |
 
 How the Master and the Slaves talk over LoRa: joining, the cycle, summaries and detail, commands, events, redundancy and time. The frame format, addressing, keys and message type numbers are in [00](00-common-frame-and-conventions.md). Channels, spreading factors and timing are in [04](04-channel-plan-and-airtime.md). Both ends of this link are pgorospe's firmware, so this spec is mainly a design record. It is still reviewed and signed at M1.
 

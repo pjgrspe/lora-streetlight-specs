@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Spec** | 00 — Common frame format and conventions |
-| **Version** | 0.1 (draft for review) |
-| **Date** | 2026-10-29 |
+| **Version** | 0.9 (release candidate for spec-v1.0, review r2) |
+| **Date** | 2026-11-03 |
 | **Owner** | pgorospe |
 | **Reviewers** | Device developer, gateway hardware developer (for the client) |
-| **Status** | Draft. Not frozen |
+| **Status** | Release candidate. Not frozen until spec-v1.0 is signed |
 
 This document holds everything the other specs share: units and byte order, addressing, the frame format used on both LoRa tiers, and the security layer. If another spec contradicts this one, this one wins and the conflict is a bug to report.
 

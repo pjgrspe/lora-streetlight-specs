@@ -3,11 +3,11 @@
 | | |
 |---|---|
 | **Spec** | 05 — Fail-safe behaviour table |
-| **Version** | 0.1 (draft for review) |
-| **Date** | 2026-10-29 |
+| **Version** | 0.9 (release candidate for spec-v1.0, review r2) |
+| **Date** | 2026-11-03 |
 | **Owner** | pgorospe |
 | **Reviewers** | Gateway hardware developer (for the client), device developer (both sign) |
-| **Status** | Draft. Not frozen |
+| **Status** | Release candidate. Not frozen until spec-v1.0 is signed |
 
 What every part of the system does when something fails, and what the lights do as a result. The hardware developer signs this for the client, because it defines the safety behaviour of the road. The device developer signs it because layer 3 (the device's own fallback) and the DALI driver settings live in their firmware.
 
