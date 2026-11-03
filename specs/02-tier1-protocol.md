@@ -22,9 +22,9 @@ Which slaves exist is configured on the Master in `cfg_section_mask` ([01](01-mo
 
 ## 2. Radios and channel use
 
-- Master: radio **R0 on ch 16** (primary, 433.175 MHz) and **R1 on ch 23** (standby, 434.575 MHz). Slave: upstream radios **U0 on ch 16** and **U1 on ch 23**. Channels per [04 §3](04-channel-plan-and-airtime.md) (D-040).
+- Master: radio **R0 on ch 0** (primary) and **R1 on ch 13** (standby). Slave: upstream radios **U0 on ch 0** and **U1 on ch 13**. Channels per [04 §3](04-channel-plan-and-airtime.md).
 - **Every box receives on both tier-1 radios at all times** unless one of its own radios is transmitting (one TX scheduler per box; reception during own TX is discarded and not counted as loss).
-- The **active channel** is the one carrying the BEACON. It is ch 16 normally and ch 23 after a Master failover. The other channel carries the HEARTBEAT.
+- The **active channel** is the one carrying the BEACON. It is ch 0 normally and ch 13 after a Master failover. The other channel carries the HEARTBEAT.
 - A transmitter picks the channel; receivers don't need to know in advance. The Master sends unicast frames to slave n on the channel where it last received a valid frame from slave n.
 - Tier-1 SF: default SF7, configurable SF7–SF8, one value for the whole tier ([04 §4](04-channel-plan-and-airtime.md)).
 
@@ -383,7 +383,7 @@ Devices that missed both cell copies of a group command are not resent by the sl
 | **Master** | Its primary radio fails a self-test (SPI register read-back, TX-done timeout), **or** no valid frame from any slave arrives on the primary for **3 consecutive cycles** while frames do arrive on the standby | At least **5 cycles** (10 min) on the standby, **and** the primary has received valid frames (the slaves' heartbeats) in at least **2 cycles** since the failover |
 | **Slave** (per its own upstream radios) | It misses **3 consecutive BEACONs** on the active channel while it still hears the Master's HEARTBEAT on the other channel, or its upstream radio fails self-test. It then sends its SUMMARY on the other channel | It hears the BEACON on the active channel again for **5 consecutive cycles** |
 
-- After a Master failover, the BEACON moves to ch 23 and the HEARTBEAT to ch 16 (`standby_active` set). The primary keeps being exercised by the HEARTBEAT.
+- After a Master failover, the BEACON moves to ch 13 and the HEARTBEAT to ch 0 (`standby_active` set). The primary keeps being exercised by the HEARTBEAT.
 - Every failover and failback raises an event and is shown in the Modbus map: a slave sends `RADIO_FAILOVER` / `RADIO_FAILBACK` (§9); the Master raises its own as `TIER1_FAILOVER` / `TIER1_FAILBACK` ([01 §7.3](01-modbus-register-map.md)).
 - A failed standby radio raises `STANDBY_RADIO_DOWN`. Detection: radio self-test fails, or no HEARTBEAT is heard on it for **3 consecutive cycles at a slave** (the Master sends one every cycle) or **10 consecutive cycles at the Master** (each slave sends one every 5th cycle). Event codes: §9 for a slave, [01 §7.3](01-modbus-register-map.md) for the Master.
 - `FORCE_FAILOVER` (§11.1) triggers the same switch on demand. It is used for the M3 acceptance test together with disconnecting the primary antenna.

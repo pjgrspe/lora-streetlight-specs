@@ -30,7 +30,7 @@ Each requirement has an ID (`HW-xx`), a level (MUST / SHOULD) and a verification
 
 | ID | Requirement | Level | Verify |
 |---|---|---|---|
-| HW-10 | Radio on the gateways: **Semtech SX1262, Ai-Thinker Ra-01SH** (803–930 MHz as sold, up to +22 dBm, IPEX connector) (D-036), the same module as the devices (03). **The tier-1 radios (Master R1/R2, Slave U1/U2) carry 433 MHz matching parts** in place of the 915 MHz ones (D-040); the cell radios (Slave D1/D2) stay stock. Not Ra-01/Ra-02 (SX1278) and not Ra-01SH-P (+29 dBm PA) | MUST | I, T (the chip reports standby and the sync word reads back 0x14 0x24; each tuned module passes the O-06-7 check) |
+| HW-10 | Radio on the gateways: **Semtech SX1262, Ai-Thinker Ra-01SH** (803–930 MHz, up to +22 dBm, IPEX connector) (D-036), the same module as the devices (03). **Not** Ra-01/Ra-02/Ra-01S (433 MHz) and not Ra-01SH-P (+29 dBm PA) | MUST | I, T (the chip reports standby and the sync word reads back 0x14 0x24) |
 | HW-11 | SPI-transparent modules only. No AT-command modules | MUST | I |
 | HW-12 | TCXO-equipped module variant on gateways. ⚠ The Ra-01SH has a crystal, not a TCXO: measure the frequency error at cabinet temperature on the bench | SHOULD | I, T |
 | HW-13 | Each radio has its own **NSS, NRESET, BUSY and DIO1** lines to the MCU. DIO2 drives the module's antenna switch; the module's TXEN and RXEN pins stay **unconnected** (TXEN is on the DIO2 net). DIO3 not used | MUST | I |
@@ -130,7 +130,7 @@ The Master uses the R1 and R2 rows only.
 | HW-81 | **Single-point earth** at a cabinet ground bar. Target ≤ 5 Ω, measured and recorded at installation | MUST | M |
 | HW-82 | **One N-type bulkhead per radio**, each with an inline **coaxial GDT arrester** bonded to the ground bar with a strap **< 0.5 m** | MUST | I |
 | HW-83 | Coax: RG-316 for runs ≤ 1 m inside the box; **LMR-240 minimum for runs > 2 m**; LMR-400 for masts | MUST | I |
-| HW-84 | Antennas: **433 MHz rated on tier-1 radios, 915 MHz rated on cell radios**, gain recorded for each radio. **EIRP = conducted power + antenna gain − cable loss ≤ 16 dBm on cells, ≤ 12 dBm on tier 1** (10 mW ERP ⚠, 04 §1); the firmware sets conducted power from the recorded values | MUST | I |
+| HW-84 | Antennas: 915 MHz rated, gain recorded for each radio (5 dBi planned on gateways, D-041). **EIRP = conducted power + antenna gain − cable loss ≤ 16 dBm**; the firmware sets conducted power from the recorded values (about 11 dBm with 5 dBi) and never above **14 dBm** (driver ceiling) | MUST | I |
 | HW-85 | Antennas of the same box as far apart as practical, **vertical stacking preferred** (≥ 1 m target). Final spacing set by the isolation test (§11) | SHOULD | M |
 | HW-86 | All outdoor connectors weatherproofed (self-amalgamating tape + vinyl) | MUST | I |
 
@@ -164,10 +164,11 @@ Open question Q24: how badly does one radio transmitting deafen the other radios
 **Procedure.**
 
 1. With all in-box radios silent, record D2 packet error rate (PER) over 500 frames. Baseline.
-2. Make U1 transmit continuously at its configured power, on tier-1 channel 16 (433 MHz), while the test transmitter sends to D2 on a cell channel. Record D2 PER and RSSI.
-3. Repeat with U1 on channel 23, and with D1 transmitting on the section's other cell channel. Then the tier-1 pair: U1 transmitting while U2 receives a test transmitter on channel 23. With tier 1 at 433 MHz (D-040) the same-band pairs (D1/D2, U1/U2) are the ones expected to matter.
+2. Make U1 transmit continuously at its configured power, on tier-1 channel 0, while the test transmitter sends to D2 on a cell channel. Record D2 PER and RSSI.
+3. Repeat with U1 on channel 13, and with D1 transmitting on the section's other cell channel.
 4. Repeat for antenna spacings of 0.3 m, 0.6 m and 1 m, and vertical vs side by side.
-5. Measure antenna-to-antenna coupling directly with a signal generator and spectrum analyser (or a second radio reading RSSI) for each spacing.
+5. Measure antenna-to-antenna coupling directly for **every antenna pair on the real lid** (NanoVNA S21, or a signal generator and spectrum analyser, or a second radio reading RSSI).
+6. **Damage check (D-041):** for every pair, conducted TX power − measured isolation must be **≤ 0 dBm** (SX1262: 0 dBm recommended maximum input, +10 dBm absolute maximum). A pair that fails is moved apart or gets lower TX power.
 
 **Decision.**
 
@@ -183,7 +184,7 @@ Results are recorded in the specs repo with photos of the antenna arrangement.
 | Item | Qty | For |
 |---|---|---|
 | NUCLEO-L476RG | 3 (1 Master + 2 Slaves) | Gateway firmware |
-| Ra-01SH (SX1262) modules | 10: 6 with 433 MHz parts and 433 MHz antennas (Master 2, each Slave 2), 4 stock with 915 MHz antennas (each Slave 2) | Gateway radios (D-036, D-040) |
+| Ra-01SH (SX1262) modules with 915 MHz antennas | 10 (2 + 4 + 4) | Gateway radios (D-036) |
 | SPI breakout for FRAM MB85RS256B + NOR W25Q64JV | 3 | Storage |
 | Isolated USB-RS485 adapter + 3.3 V RS485 transceiver board for the Master | 1 + 1 | Modbus link |
 | Server PC (client-supplied) | 1 | Monitoring server |
@@ -207,4 +208,3 @@ Results are recorded in the specs repo with photos of the antenna arrangement.
 | O-06-4 | Cabinet type and location (pole-top vs ground cabinet) decide coax lengths and enclosure size | Hardware developer |
 | O-06-5 | Earthing resistance achievable at the site | Survey |
 | O-06-6 | ⚠ Mean Well IRM-10-5 surge immunity isn't published; confirm the staged protection is enough | Hardware developer |
-| O-06-7 | Tuned 433 MHz modules (D-040): the replacement part values and where they come from (Ra-01S BOM, Semtech reference design), who reworks them, and a check on each one after rework (RSSI at 433 vs a 915 MHz pair, 04 O-04-6) | Before the Slave enclosure is final |
