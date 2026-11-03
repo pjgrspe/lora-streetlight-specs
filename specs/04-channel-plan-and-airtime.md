@@ -168,16 +168,17 @@ At `CYCLE = 120 s` (30 cycles per hour), SF9 cell, SF7 tier 1:
 | Tier-1 DETAIL basic records, all 60 devices every 15 min (3 frames per 15 min) | — | 4.7 s |
 | Tier-1 DETAIL extended records, all 60 devices every hour (3 frames) | — | 1.2 s |
 | Tier-1 meter record, every 5 min | — | 1.3 s |
-| **Scheduled total** | | **23.9 s (66%)** |
+| Tier-1 DETAIL sensor records, all 60 devices every hour (2 frames, D-042) | — | 0.5 s |
+| **Scheduled total** | | **24.4 s (68%)** |
 | P0 reserve | | 9.0 s (25%) |
-| Left for commands, retries, joins, fragments | | 3.1 s (9%) |
+| Left for commands, retries, joins, fragments | | 2.6 s (7%) |
 
 The margin left for commands and retries is thin. If it proves too thin on the bench, the first lever is the detail interval: 30 min instead of 15 frees 2.4 s/h.
 
 | Cycle | Scheduled slave load | Verdict |
 |---|---|---|
 | 60 s | ~40 s/h = **~112%** | ❌ Doesn't fit under a per-box 1% budget |
-| **120 s** | 23.9 s/h = **66%** | ✅ Default |
+| **120 s** | 24.4 s/h = **68%** | ✅ Default |
 | 180 s | ~18 s/h = ~51% | ✅ More margin, slower status |
 
 **If NTC confirms one budget per radio**, the slave's load is spread over 4 radios and a 60 s cycle fits.

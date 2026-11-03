@@ -121,6 +121,7 @@ Each item is testable on the bench. The device developer confirms each one in wr
 | DD-8 | Expire overrides at their lifetime (max 720 min) and clear all overrides on reboot | Set a 2-min override; it ends on time. Reboot during an override: back to schedule |
 | DD-9 | Report `dali_ok`, `driver_fault`, `lamp_fault`, `commanded_off`, `fallback_mode`, `clock_trusted`, `restarted` truthfully, per the status bits in [03](03-tier2-device-protocol.md) | Inject each condition; check the report |
 | DD-10 | After a reboot with a valid stored slot, rejoin in its own slot, not the contention window | Power-cycle a full bench section together; no join storm |
+| DD-12 | **Sensors only ever add light or dim within limits** (D-042, [03](03-tier2-device-protocol.md) §7.3): the light sensor can switch a lamp on by day but never off at night; motion dims to `motion_idle_level` (≥ the dim floor) and never switches off; no motion dimming with an untrusted clock, in `fallback_mode`, during an override or with a faulty sensor | Cover the light sensor at noon: lamp on. Shine a torch on it at night: lamp stays on. Unplug the PIR at night: lamp at scheduled level, `sensor_fault` set |
 | DD-11 | Never switch off on an ambiguous condition (unknown time, lost link, config error): the answer is always 100% ON at night | Covered by DD-3, DD-4 and F17 test |
 
 ## 8. M6 acceptance tests

@@ -74,9 +74,10 @@ All addresses in this spec are **0-based Modbus protocol addresses in hex**, as 
 | Summary | `0x0400` + s × 64 + n | 1 per device | Packed status + level, for fast polling (§6.7) |
 | Events | `0x0800`–`0x090F` | 4 + 32 × 8 | Event window (§7) |
 | Devices | `0x1000` + s × 0x400 + n × 16 | 16 per device | Full device block (§6.8) |
+| Sensors | `0x5000` + s × 0x100 + n × 4 | 4 per device | Pole sensor readings, hourly (§6.10, D-042) |
 | Diagnostics | `0x7000` + s × 16 | 16 per section | Tier-1 link statistics per slave (§6.9) |
 
-Valid FC04 ranges: `0x0000`–`0x07FF`, `0x0800`–`0x090F`, `0x1400`–`0x4BFF`, `0x7000`–`0x70FF`. Positions inside these ranges with no field defined (including every s = 0 and n = 0 position) are **reserved and read 0**.
+Valid FC04 ranges: `0x0000`–`0x07FF`, `0x0800`–`0x090F`, `0x1400`–`0x4BFF`, `0x5100`–`0x5EFF`, `0x7000`–`0x70FF`. Positions inside these ranges with no field defined (including every s = 0 and n = 0 position) are **reserved and read 0**.
 
 ### 4.2 Holding registers (FC03 / FC06 / FC16)
 
@@ -240,7 +241,10 @@ Used in `dev_status`, `met_status` and on the radio ([03](03-tier2-device-protoc
 | 8 | `d4i_available` | Driver supports D4i data |
 | 9 | `config_mismatch` | Device configuration differs from what the gateway holds |
 | 10 | `restarted` | First report after a device boot |
-| 11–15 | — | Reserved (0) |
+| 11 | `ldr_dark` | The pole's light sensor says dark |
+| 12 | `pole_tilted` | The pole leans more than the set angle |
+| 13 | `sensor_fault` | A pole sensor isn't working |
+| 14–15 | — | Reserved (0) |
 
 ### 6.5 Section blocks (`0x0100` + s × 16)
 
@@ -329,6 +333,17 @@ Source: the slave's DETAIL records ([02](02-tier1-protocol.md)) and status chang
 | `+13` | `dev_rssi_snr` | u16 | 1 |  | R | Link quality at the slave: high byte RSSI (int8, dBm), low byte SNR (int8, 0.25 dB) |
 | `+14` | `dev_slot_channel` | u16 | 1 |  | R | High byte slot position 0-63 (0xFF none), low byte radio channel number in use (spec 04) |
 | `+15` | `dev_age_detail_s` | u16 | 1 | s | R | Seconds since the power, energy and extended fields were measured. 0xFFFF = never |
+
+### 6.10 Sensor blocks (`0x5000` + s × 0x100 + n × 4)
+
+Source: the slave's hourly DETAIL sensor records ([02](02-tier1-protocol.md) §7, D-042). All four registers read 0xFFFF for a device that reports no sensor.
+
+| Offset | Name | Type | Scale | Unit | Access | Description |
+|---|---|---|---|---|---|---|
+| `+0` | `dev_motion_count` | u16 | 1 |  | R | Motion detections in the last sensor period (1 h). 0xFFFF = no motion sensor |
+| `+1` | `dev_ambient` | u16 | 1 |  | R | Light level, log scale: lux = 10^(value / 40) - 1. 0xFFFF = no light sensor |
+| `+2` | `dev_sensor_flags` | bits16 | 1 |  | R | bit0 light sensor reported, bit1 motion sensor reported, bit2 sensor fault |
+| `+3` | `dev_age_sensor_s` | u16 | 1 | s | R | Seconds since the sensor values were received. 0xFFFF = never |
 
 ### 6.9 Diagnostics (`0x7000` + s × 16)
 
@@ -543,6 +558,7 @@ Opcode numbers are the same in the mailbox and in radio CMD frames ([02](02-tier
 | `0x0D` | `REASSERT_CONFIG` | Device, section, site | — | — |
 | `0x0E` | `SET_FAILSAFE_LEVELS` | Device, section, site, group | `p0` POWER ON LEVEL · `p1` SYSTEM FAILURE LEVEL | — |
 | `0x0F` | `FORCE_FAILOVER` | Master, slave | `p0` 0 = return to primary, 1 = force standby | — |
+| `0x10` | `SET_SENSORS` | Section, site | `p0` light-sensor mode (0 report only, 1 on if dark) · `p1` dark threshold · `p2` bright threshold (log scale as `dev_ambient`) · `p3` motion mode (0 report only, 1 dim until motion) · `p4` idle level, DALI arc · `p5` hold time, s · `p6` tilt alarm, degrees · `p7` impact alarm, 0.1 g (spec 03 §7.3) | — |
 
 Unused parameter registers MUST be 0. **Target encoding:** a device is its 12-bit address (`0x0snn`); a section is `0x0sFF`; the whole site is `0x0FFF`; the Master is `0x0000`; a slave is `0x0s00`; a group is `0x8000 + g` (g = 0–15). Any other value gives `REJECTED` / `BAD_TARGET`.
 
@@ -639,6 +655,7 @@ When `cfg_fc03_mirror` = 1 (default), FC03 at holding address `0x8000 + a` retur
 | When `telemetry_epoch` changes | Section blocks `0x0110`–`0x01EF` and meter blocks of configured sections | 16 / 32 per section | 1–2 / 1 per 3 sections |
 | When a device's summary changes | That device's block, whole | 16 | grouped |
 | Each detail interval (15 min) | Every configured device block, whole blocks | 16 per device | 9 per 60-device section |
+| Hourly | Sensor blocks of configured sections (`0x5000 + s×0x100`, 256 registers) | 4 per device | 3 per section |
 
 **Device blocks are read in whole blocks**, at most 7 per request (112 registers), so no 32-bit value or block is split across requests (§5.3). A full 60-device section (NodeIDs 1–60, `0x...10`–`0x...3CF`) is **9 requests**: 8 of 7 devices and 1 of 4.
 

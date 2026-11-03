@@ -16,6 +16,7 @@ Review round: **`review-r2`**, 3 working days. Then the set is tagged `spec-v1.0
 | D-037, D-038 | Device recovery after losing its Slave; device clock steps after a large correction | 03 |
 | D-039 | Faster command feedback on the dashboard | 02 |
 | D-040, D-041 | 433 MHz for tier 1 considered and **withdrawn: everything stays on 915–918 MHz**. Gateway power ceiling 14 dBm; in-box damage check (TX − isolation ≤ 0 dBm) | 00, 01, 04, 06 |
+| D-042 | **Pole sensors:** light sensor (switches on when dark), motion (dims at night, back to full on motion, never off), tilt and impact alarms. Decided on the device; readings sent up hourly; settings per section from the dashboard | 01, 02, 03, 04, 05, 07 |
 
 Full text of each decision: [DECISIONS.md](DECISIONS.md).
 
@@ -30,6 +31,7 @@ Full text of each decision: [DECISIONS.md](DECISIONS.md).
 | O-04-2 | Is a 2-minute status cycle acceptable? (1 minute needs NTC to allow a duty budget per radio) | 120 s |
 | O-05-5 | After how long without any message from the server should the Master declare it lost? (The site keeps running its schedules either way) | 30 min |
 | O-05-6 | Is full-night 100 % (no dimming) acceptable while a section runs on its own? | Yes |
+| D-042 | Motion dimming: the light idles dim (default 30 %) and returns to full on motion, but **never switches off** for lack of motion, for safety. Is that acceptable to the client? And the light sensor switches lights on when dark even by day (storms)? | Yes to both |
 | O-07-7 | Default length of a manual override, and the confirmation rule for switching a whole site or section OFF | 60 min (max 12 h); OFF for a site or section asks to confirm and shows how many poles it affects (CTL-4) |
 
 ## 3. Questions for the device developer
@@ -41,7 +43,7 @@ Full text of each decision: [DECISIONS.md](DECISIONS.md).
 | O-03-2 | Which measurements does the LED device give: voltage, current, power, energy, temperature? | As DP-6: power, voltage, current, energy, and temperature where the hardware can; "not measured" otherwise |
 | O-03-3 | First join can take up to 24 min (the device scans 12 channels). OK for commissioning, or pre-set each device's section on the bench? | OK as is |
 | O-03-4 | Meter: which model, and read how (metering IC or external Modbus meter)? Confirms the meter REPORT fields | Fields as in 03 |
-| O-03-5 | Does the LED device have a tamper input? | No (`TAMPER` event unused) |
+| O-03-5 | Which sensors does the LED device carry (light, motion, tilt / impact): models, and how they connect to the Blue Pill (pins, I²C or analog)? Also a tamper input? Note the end client excludes materials from China, sensors included | Needed: no default. Spec 03 §7.3 and DP-13 describe what the firmware does with them |
 | O-05-3 | Can the device keep time through a power cut (RTC backup)? | No: after a daytime power restore, lights go 100 % until the first beacon |
 
 ## 4. Proposed to close or move (no answer needed)

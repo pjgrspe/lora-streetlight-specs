@@ -75,6 +75,7 @@ Types are PostgreSQL. `ts` columns are `timestamptz` stored in UTC and displayed
 |---|---|---|
 | `device_status` | `ts` · `address` smallint · `status` int (status bits, [01 §6.4](01-modbus-register-map.md)) · `level_actual` smallint · `level_commanded` smallint · `online_state` smallint (summary comm state: 0 not configured, 1 online, 2 stale, 3 offline) · `age_status_s` int | Summary and status registers; stored **on change** plus once every 15 min |
 | `device_detail` | `ts` · `address` · `power_dw` int · `energy_wh` bigint · `voltage_dv` int · `current_ma` int · `temp_c` smallint · `lamp_hours` int · `fault_code` smallint · `rssi_dbm` smallint · `snr_db` numeric · `slot` smallint · `channel` smallint · `age_detail_s` int | Device block; every 15 min (basic) and hourly (extended) |
+| `device_sensor` | `ts` · `address` · `motion_count` int (detections in the hour) · `ambient_lux` numeric · `sensor_flags` smallint | Sensor block ([01](01-modbus-register-map.md) §6.10); hourly (D-042) |
 | `meter_reading` | `ts` · `address` · `v_l1/l2/l3_dv` int · `i_l1/l2/l3/n_10ma` int · `p_l1/l2/l3_w` int · `p_total_w` int · `pf_total` numeric(4,3) · `freq_hz` numeric(5,2) · `e_import_wh` bigint · `e_export_wh` bigint · `thd_i_pct` numeric · `flags` int · `age_s` int | Meter block; every 5 min |
 | `gateway_health` | `ts` · `gateway_id` · `state` text (SYNCED, DEGRADED, AUTONOMOUS, CLOCK_UNTRUSTED, REJOINING, LOST) · `active_t1_radio` text · `airtime_pct` numeric · `devices_online` smallint · `uptime_s` bigint · `boot_count` int · `fault_bitmap` bigint · per-radio counters jsonb | System and section blocks; every 60 s |
 | `modbus_link` | `ts` · `state` · `polls_ok` int · `polls_failed` int · `crc_errors` int · `exceptions` int | Poller; every 60 s |
@@ -129,6 +130,9 @@ This is **the system's alarm catalogue**: every alarm an operator can see, and e
 | `DEVICE_ENVIRONMENT` | 1 | Over-temperature or supply out of range | Fault code back to 0 | Events `0x4A`, `0x4B`; fault codes 7, 8 |
 | `DEVICE_HW_FAULT` | 2 | Device storage, RTC or radio fault | Fault code back to 0 | Fault codes 9, 10, 11 |
 | `TAMPER` | 2 | Tamper input triggered | Operator ack | Event `0x4D` |
+| `POLE_TILTED` | 2 | A pole leans more than the set angle (hit or damaged) | Status bit clear | Status bit 12; event `0x54`; fault code 13 |
+| `POLE_IMPACT` | 2 | A pole took a shock above the set level | Operator ack | Event `0x55` |
+| `SENSOR_FAULT` | 1 | A light, motion or tilt sensor stopped working (the light runs on its schedule) | Status bit clear | Status bit 13; event `0x56`; fault code 12 |
 | `METER_FAULT` | 2 | Meter fault reported | Fault code back to 0 | Event `0x52`; meter fault codes 20, 22 |
 | `METER_OVERCURRENT` | 1 | Overcurrent on a phase | Operator ack | Event `0x53` |
 | `SECTION_POWER_LOST` | 3 | Mains or a phase lost on a section (never shared with commanded off) | Voltage restored | Slave events `0x05`, `0x06`; meter events `0x50` / `0x51`; meter flags bits 2–4; fault code 21 |
@@ -178,6 +182,7 @@ This is **the system's alarm catalogue**: every alarm an operator can see, and e
 | UI-7 | **Job progress:** each command shows its state and `n_confirmed / n_targets`. PARTIAL is shown plainly, with the failed poles listed and a "retry failed" action |
 | UI-8 | **Action and confirmation are shown separately.** "Command sent — lights switch at 18:02:05" first. Per-device confirmation fills in as reports arrive (up to one cycle) |
 | UI-9 | **Gateway health page:** Modbus link, Master and every slave: state, uptime, radios, counters, airtime |
+| UI-13 | **Pole sensors (D-042):** the pole view shows the light level in words (Dark, Dusk, Daylight) with lux under "Technical details", motion activity per hour for the last 7 days, and the tilt state. The section view can colour poles by motion activity (busiest streets) |
 | UI-10 | **Energy page:** section kWh per day and month, power charts from the meter |
 | UI-11 | The UI works in current Chrome and Edge on a desktop screen, and on a phone browser connected to the site's own network (one column, larger touch targets). Access from outside the site network stays an optional add-on (§1) |
 | UI-12 | **Plain language.** Operators and crews are not engineers: every screen uses the design system's vocabulary (light, area, brightness, Main gateway, Area gateway; alerts titled in words with what to do). Engineering values (addresses, DALI levels, dBm, channels, codes) appear only in a closed "Technical details" section |
@@ -198,6 +203,7 @@ This is **the system's alarm catalogue**: every alarm an operator can see, and e
 | CTL-10 | `FORCE_FAILOVER` (0x0F) and `REBOOT` (0x07) are admin-only and shown on the gateway health page |
 | CTL-11 | Retrying a failed job retries only the poles that didn't confirm |
 | CTL-11a | **Automatic resend (D-034):** 2 min after a level command ends with poles that didn't confirm, the Server resends once to those poles (one unicast each, at most 4 in flight, the override time left). Poles not responding are resent when they are heard again, until the override ends. Never when a newer command covers them |
+| CTL-13 | **Sensor settings (admin), per section or site,** pushed with `SET_SENSORS` (0x10): light sensor on/off with its dark and bright thresholds; motion dimming on/off, the idle brightness and the hold time; the tilt and impact alarm levels. The UI refuses an idle brightness below the dim floor (CTL-8) and shows when each gateway confirms the new configuration version |
 | CTL-12 | Commands are absolute (a level, never "up 10 %"). ON/OFF is never a toggle |
 
 ## 9. Users and roles

@@ -124,6 +124,10 @@ input,0x100C,0x1000,0x000C,0x0400,0x0010,1,dev_fault_code,u16,1,,R,per_device,"D
 input,0x100D,0x1000,0x000D,0x0400,0x0010,1,dev_rssi_snr,u16,1,,R,per_device,"Link quality at the slave: high byte RSSI (int8, dBm), low byte SNR (int8, 0.25 dB)"
 input,0x100E,0x1000,0x000E,0x0400,0x0010,1,dev_slot_channel,u16,1,,R,per_device,"High byte slot position 0-63 (0xFF none), low byte radio channel number in use (spec 04)"
 input,0x100F,0x1000,0x000F,0x0400,0x0010,1,dev_age_detail_s,u16,1,s,R,per_device,"Seconds since the power, energy and extended fields were measured. 0xFFFF = never"
+input,0x5000,0x5000,0x0000,0x0100,0x0004,1,dev_motion_count,u16,1,,R,per_device,Motion detections in the last sensor period (1 h). 0xFFFF = no motion sensor (spec 03 section 7.3)
+input,0x5001,0x5000,0x0001,0x0100,0x0004,1,dev_ambient,u16,1,,R,per_device,Light level on a log scale: lux = 10^(value / 40) - 1. 0xFFFF = no light sensor
+input,0x5002,0x5000,0x0002,0x0100,0x0004,1,dev_sensor_flags,bits16,1,,R,per_device,"bit0 light sensor reported, bit1 motion sensor reported, bit2 sensor fault"
+input,0x5003,0x5000,0x0003,0x0100,0x0004,1,dev_age_sensor_s,u16,1,s,R,per_device,Seconds since the sensor values were received. 0xFFFF = never
 input,0x7000,0x7000,0x0000,0x0010,0x0000,2,diag_summary_rx,u32,1,,R,per_section,SUMMARY frames received from this slave
 input,0x7002,0x7000,0x0002,0x0010,0x0000,2,diag_summary_missed,u32,1,,R,per_section,Tier-1 slots in which no SUMMARY arrived
 input,0x7004,0x7000,0x0004,0x0010,0x0000,1,diag_last_snr_qdb,i16,0.25,dB,R,per_section,SNR at the master of the last frame from this slave

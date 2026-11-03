@@ -20,6 +20,7 @@ Frame format, addressing, keys and type numbers: [00](00-common-frame-and-conven
 - **Every cycle (default 120 s) it sends one REPORT in its slot.** No polling.
 - Commands arrive any time in the downlink window. Group commands carry **`execute_at`**: all devices switch at that second.
 - **Lights are switched by the device's own astronomical schedule**, with no radio traffic. Commands override it temporarily; every override expires.
+- If the device has **sensors** (daylight, motion, tilt), it uses them locally to switch and dim (§7.3) and reports what they see (D-042).
 - If the Slave disappears, the device keeps running its schedule (`fallback_mode`). If its clock can't be trusted, it drives the lamp to **100%**.
 - You write: DALI control, measurements, the astronomical schedule, RTC, persistence and the hardware glue. The library does everything on the radio.
 
@@ -131,9 +132,12 @@ Used in REPORT, in the tier-1 DETAIL record ([02 §7](02-tier1-protocol.md)) and
 | 8 | `d4i_available` | The gear supports DALI Parts 251–253 |
 | 9 | `config_mismatch` | A read-back of the DALI gear settings doesn't match the configured values |
 | 10 | `restarted` | Set in the first REPORT after a boot, cleared afterwards |
-| 11–15 | reserved | 0 |
+| 11 | `ldr_dark` | The light sensor says dark (with hysteresis, §7.3). 0 if no light sensor |
+| 12 | `pole_tilted` | The tilt sensor reads more than `tilt_alarm_deg` from the installed position |
+| 13 | `sensor_fault` | A fitted sensor doesn't respond or reads stuck (§7.3) |
+| 14–15 | reserved | 0 |
 
-For the meter, bits 1–3, 6–9 are 0 and `lamp_on` is 0.
+For the meter, bits 1–3, 6–9 and 11–13 are 0 and `lamp_on` is 0.
 
 ## 7. REPORT (TYPE `0x02`), device → Slave
 
@@ -143,11 +147,13 @@ Sent **once per cycle, in the device's slot**. `DST = GwID << 8`, `DIR = 0`, `PR
 
 **Slot timing:** slot k starts at `cell_start + slot0_ms + (k mod 32) × slot_ms` (k ≥ 32 uses channel B at the same times). In single-channel mode it starts at `cell_start + slot0_ms + k × slot_ms` on the surviving channel. **The device starts transmitting 20 ms after the slot start, within ±20 ms.**
 
-### 7.1 LED device REPORT, 20 bytes (frame 32 B, 247 ms at SF9)
+### 7.1 LED device REPORT, 22 bytes (frame 34 B, 247 ms at SF9)
+
+`report_fmt` `0x03` (LED v2, D-042) adds the two sensor bytes at offsets 20–21. **They cost no airtime**: a 34-byte frame takes the same 247 ms as 32 bytes at SF9. A device without sensors sends 255 in both. The Slave also accepts `0x01` (LED v1, the first 20 bytes only).
 
 | Off | Size | Field | Notes |
 |---|---|---|---|
-| 0 | 1 | `report_fmt` | `0x01` = LED v1 |
+| 0 | 1 | `report_fmt` | `0x03` = LED v2 (`0x01` = LED v1, no bytes 20–21) |
 | 1 | 2 | `status` | §6 |
 | 3 | 1 | `level_actual` | DALI arc level the gear is at now (`QUERY ACTUAL LEVEL`), 255 = unknown |
 | 4 | 1 | `level_target` | Level the device is trying to hold (schedule or override) |
@@ -159,6 +165,8 @@ Sent **once per cycle, in the device's slot**. `DST = GwID << 8`, `DIR = 0`, `PR
 | 16 | 2 | `lamp_hours` | Lamp operating hours, saturating at 65 534. `0xFFFF` = n/a |
 | 18 | 1 | `fault_code` | §9.1 |
 | 19 | 1 | `last_cmd_fcnt_lo` | Low byte of the `FCNT` of the last CMD frame the device executed. The Slave uses it with `level_actual` to confirm commands |
+| 20 | 1 | `motion_count` | Motion detections since the previous REPORT, saturating at 254. 255 = no motion sensor |
+| 21 | 1 | `ambient` | Light level now, log scale: lux = 10^(`ambient` / 40) − 1 (0 = dark, 200 ≈ 100 000 lux). 255 = no light sensor |
 
 ### 7.2 Meter REPORT, 44 bytes (frame 56 B, 349 ms at SF9, double slot)
 
@@ -179,6 +187,29 @@ Sent **once per cycle, in the device's slot**. `DST = GwID << 8`, `DIR = 0`, `PR
 | 43 | 1 | `fault_code` | §9.1 |
 
 The meter measures continuously and reports the latest values every cycle. The Slave forwards meter data to the Master every 5 min ([02 §7](02-tier1-protocol.md)).
+
+### 7.3 Pole sensors (D-042)
+
+An LED device may have a **light sensor** (LDR or photodiode), a **motion sensor** (PIR or microwave) and a **tilt / impact sensor** (accelerometer). Each is optional. The device firmware applies them locally, with no radio traffic, using the settings from `SET_SENSORS` (§10.2). Until the first `SET_SENSORS`, the device uses these defaults:
+
+| Setting | Default | Meaning |
+|---|---|---|
+| `ldr_mode` | 1 | Light sensor switches on when dark (it can only add light) |
+| `ldr_on` / `ldr_off` | 53 / 67 | Dark below about 20 lux, bright again above about 45 lux |
+| `motion_mode` | 0 | Motion reported only: no dimming until the client sets it |
+| `motion_idle_level` / `motion_hold_s` | 210 / 60 | About 30 % (DALI arc 210), held 60 s after the last motion |
+| `tilt_alarm_deg` / `impact_alarm` | 10 / 20 | Alarm above 10° of lean, or a shock above 2.0 g ⚠ to tune on the first poles |
+
+| # | Rule |
+|---|---|
+| S-1 | **Light sensor, `ldr_mode` 1 (default when fitted):** the lamp is on if the astronomical schedule says night **or** the sensor says dark. It goes off only when **both** say day. "Dark" is entered below `ldr_on` and left above `ldr_off` (same log scale as `ambient`; `ldr_off` > `ldr_on`), each held for 60 s before it counts. Lit by the sensor alone (a storm by day), the lamp runs at the first dimming step's level. `ldr_mode` 0 = sensor reported only |
+| S-2 | **Motion, `motion_mode` 1:** while the schedule has the lamp on, the lamp idles at `motion_idle_level`. Motion brings it to the scheduled level within 1 s; it returns to idle `motion_hold_s` after the last detection, with the configured fade. `motion_mode` 0 = motion reported only |
+| S-3 | **Motion never switches a lamp off**, and `motion_idle_level` is never below the dim floor (the Server enforces it, [07](07-server-data-model.md) CTL-8). If the scheduled level is lower than the idle level, the scheduled level wins |
+| S-4 | **No motion dimming** while the clock is untrusted (the lamp is at 100 %), in `FALLBACK` (100 %, [05](05-fail-safe-behaviour.md) DD-3), while an override is active (the operator's level wins), or while the motion sensor is faulty (scheduled level) |
+| S-5 | **Tilt and impact:** more than `tilt_alarm_deg` from the position stored at installation sets `pole_tilted` and raises `POLE_TILTED`; a shock above `impact_alarm` raises `POLE_IMPACT`. Neither changes the lamp |
+| S-6 | **Sensor faults:** a sensor that doesn't respond, or reads exactly the same value for 48 h (light) or never triggers for 7 days (motion), sets `sensor_fault`, sends `SENSOR_FAULT` and is ignored for switching until it works again. A faulty light sensor leaves the schedule in charge |
+
+The device reports `motion_count` and `ambient` in every REPORT. The Slave sums the motion counts and sends them up hourly ([02 §7](02-tier1-protocol.md)).
 
 ## 8. Cell BEACON (TYPE `0x01`), Slave → devices
 
@@ -229,6 +260,8 @@ The single most important current fault. 0 when healthy.
 | 9 | Internal storage fault | both |
 | 10 | RTC fault | both |
 | 11 | Radio fault (self-detected) | both |
+| 12 | Sensor fault (light, motion or tilt sensor, §7.3 S-6) | LED |
+| 13 | Pole tilted (§7.3 S-5) | LED |
 | 20 | Metering IC not responding | meter |
 | 21 | Phase loss | meter |
 | 22 | Reverse power / CT reversed | meter |
@@ -249,8 +282,6 @@ Forwarded unchanged by the Slave in tier-1 EVENTs ([02 §9](02-tier1-protocol.md
 | `0x46` | `FAULT_CLEARED` | info | cleared fault code u8 |
 | `0x47` | `FALLBACK_ENTERED` | warning | — (sent after the Slave is found again) |
 | `0x48` | `FALLBACK_EXITED` | info | minutes spent in fallback u16 |
-
-Only `FALLBACK_EXITED` is sent: it carries the minutes spent in fallback, and `FALLBACK_ENTERED` would go at the same moment, so it isn't sent separately. It starts after a random 0–31 cycles, because a whole cell may leave `FALLBACK` together and the contention window must stay free for devices still rejoining. The library queues it itself.
 | `0x49` | `CLOCK_UNTRUSTED` | alarm | — |
 | `0x4A` | `OVER_TEMPERATURE` | warning | temperature i8 |
 | `0x4B` | `SUPPLY_OUT_OF_RANGE` | warning | voltage dV u16 |
@@ -260,7 +291,12 @@ Only `FALLBACK_EXITED` is sent: it carries the minutes spent in fallback, and `F
 | `0x51` | `METER_PHASE_RESTORED` | info | phase mask u8 |
 | `0x52` | `METER_FAULT` | alarm | fault code u8 |
 | `0x53` | `METER_OVERCURRENT` | warning | phase mask u8 |
-| `0x54`–`0x7F` | reserved | | |
+| `0x54` | `POLE_TILTED` | alarm | angle from the installed position, degrees u8 (§7.3 S-5) |
+| `0x55` | `POLE_IMPACT` | alarm | peak acceleration, 0.1 g u8 (§7.3 S-5) |
+| `0x56` | `SENSOR_FAULT` | warning | sensor mask u8: bit0 light, bit1 motion, bit2 tilt (§7.3 S-6) |
+| `0x57`–`0x7F` | reserved | | |
+
+Only `FALLBACK_EXITED` is sent: it carries the minutes spent in fallback, and `FALLBACK_ENTERED` would go at the same moment, so it isn't sent separately. It starts after a random 0–31 cycles, because a whole cell may leave `FALLBACK` together and the contention window must stay free for devices still rejoining. The library queues it itself. A cleared tilt or sensor fault is reported with `FAULT_CLEARED` (fault code 13 or 12).
 
 ## 10. Commands
 
@@ -295,6 +331,7 @@ Numbers match the Modbus mailbox and tier 1 ([02 §11.1](02-tier1-protocol.md)).
 | `0x0C` | `REPLACE_DRIVER` | `short_addr` u8 (DALI short address to program, normally 0) | ✅ | — |
 | `0x0D` | `REASSERT_CONFIG` | `config_ver` u8 · `group_mask` u16 · `power_on_level` u8 · `system_failure_level` u8 · `default_fade` u8 | ✅ | — |
 | `0x0E` | `SET_FAILSAFE_LEVELS` | `power_on_level` u8 · `system_failure_level` u8 | ✅ | — |
+| `0x10` | `SET_SENSORS` | `ldr_mode` u8 · `ldr_on` u8 · `ldr_off` u8 · `motion_mode` u8 · `motion_idle_level` u8 · `motion_hold_s` u16 · `tilt_alarm_deg` u8 · `impact_alarm` u8 (0.1 g) (§7.3) | ✅ | — |
 
 `SET_TIME`, `OPEN_COMMISSIONING`, `AUTHORISE_DEVICE`, `REVOKE_DEVICE`, `REPLACE_DEVICE` and `FORCE_FAILOVER` are never sent to devices.
 
@@ -338,7 +375,7 @@ If the Slave gets no CMD_ACK, it retries up to 3 times, 2 s apart, within `not_a
 
 ### 12.1 Configuration push
 
-- On join, and whenever the BEACON's `config_ver` differs from the device's stored value, the Slave sends `SET_SCHEDULE` and `REASSERT_CONFIG` as unicast CMDs. The device stores them and acknowledges.
+- On join, and whenever the BEACON's `config_ver` differs from the device's stored value, the Slave sends `SET_SCHEDULE`, `SET_SENSORS` and `REASSERT_CONFIG` as unicast CMDs. The device stores them and acknowledges. A device without sensors acknowledges `SET_SENSORS` with `OK` and ignores it.
 - `REASSERT_CONFIG` also tells the device to **write the DALI settings again** (`POWER ON LEVEL`, `SYSTEM FAILURE LEVEL`, fade, groups), read them back, and clear or set `config_mismatch`.
 - `SET_FAILSAFE_LEVELS` writes the two DALI levels immediately. Defaults are 254 / 254 ([05](05-fail-safe-behaviour.md)).
 
@@ -378,6 +415,7 @@ Protocol-side obligations are numbered DP-n. The fail-safe obligations DD-1 to D
 | DP-9 | **Radio power** | Set conducted power so that **EIRP ≤ 16 dBm** for the antenna and cable fitted (conducted = 16 − antenna gain + cable loss) |
 | DP-10 | **Timing** | Call the library's poll function at least every 5 ms, and service DIO interrupts within 1 ms, so slot TX starts within ±20 ms and CMD_ACKs within 300 ms |
 | DP-11 | **Watchdog** | Independent watchdog enabled. A reboot must leave the lamp in a safe state (DALI `POWER ON LEVEL` covers the gap) |
+| DP-13 | **Sensors (if fitted)** | Read the light, motion and tilt sensors; apply §7.3 (S-1 to S-6) with the `SET_SENSORS` settings; report `motion_count`, `ambient`, status bits 11–13 and the sensor events. Store the tilt reference position at installation and the settings (DP-7). Report 255 for a sensor that isn't fitted |
 | DP-12 | **Provisioning** | On the bench: store UID record, `DevKey` (or the data to derive it) and `tz_offset_min` (+480) in protected flash; enable readout protection level 1. Never ship a default key |
 
 **The library provides:** frame encode/decode, AES-128 CMAC/CTR, keys and session derivation, replay and duplicate windows, channel scan, join/rejoin/backoff, BEACON tracking and clock offset, slot timing, channel failover, event retry, command parsing and dispatch to callbacks, CMD_ACK, airtime checks, CAD before contention frames, the SX1262 driver (behind `lp_port_t`, written from the Semtech datasheet).
@@ -423,5 +461,5 @@ Delivered **with the library at M4**, generated from the reference implementatio
 | O-03-2 | Which measurements the LED device hardware actually provides (V, I, P, E, temperature) | M1 sign-off |
 | O-03-3 | Worst-case first-join time is 12 cycles (24 min) because the device scans 12 channels. Acceptable for commissioning, or should the device be bench-provisioned with its section? | M1 sign-off |
 | O-03-4 | Meter model and how the device developer reads it (direct metering IC or an external Modbus meter); confirms the meter REPORT fields | M1 sign-off |
-| O-03-5 | Does the LED device hardware have a tamper input? (`TAMPER` event) | M1 sign-off |
+| O-03-5 | Which sensors the LED device carries (light, motion, tilt / impact), their models and how they connect to the Blue Pill (pins, I²C / analog); whether there is also a tamper input (`TAMPER` event). ⚠ The end client excludes materials from China; that includes the sensors | M1 sign-off |
 | O-03-6 | ⚠ Confirm the 16 KB / 3 KB library budget on the actual F103 boards (clone chips) | M4 |

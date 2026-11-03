@@ -135,6 +135,7 @@ Per-device and meter data that doesn't fit in the SUMMARY. Sent at +0.75 in the 
 | `0x01` | basic | 12 B | 20 / 10 | Every 15 min for every device, and in the next free slot for every device set in `changed_bitmap` |
 | `0x02` | extended | 12 B | 20 / 10 | Every 60 min for every device |
 | `0x03` | meter | 44 B | 5 / 2 | Every 5 min (one record per section) |
+| `0x04` | sensor | 5 B | 40 / 20 | Every 60 min for every device that reports a sensor (D-042). 40 records = 214 B, 338 ms at SF7, inside the 400 ms limit |
 
 **Basic record (12 B):**
 
@@ -164,7 +165,9 @@ Per-device and meter data that doesn't fit in the SUMMARY. Sent at +0.75 in the 
 
 **Meter record (44 B):** `node_id` u8, then bytes 1–43 of the meter REPORT exactly as in [03 §7.2](03-tier2-device-protocol.md).
 
-**Order of preference** when more than one frame is due: EVENT (P1) > changed-device basic records > meter > periodic basic > extended > FRAG. A slave with more due than one frame per cycle catches up over the following cycles. The Master ACKs each DETAIL with an `ACK` (§10); an unacknowledged DETAIL is resent once, then dropped (the next periodic round replaces it).
+**Sensor record (5 B):** `node_id` u8 · `motion_count` u16 (sum of the device's `motion_count` since the previous sensor record, saturating at 65 534; 0xFFFF = no motion sensor) · `ambient` u8 (latest, [03 §7.1](03-tier2-device-protocol.md); 255 = no light sensor) · `sensor_flags` u8 (bit0 light sensor reported, bit1 motion sensor reported, bit2 `sensor_fault`).
+
+**Order of preference** when more than one frame is due: EVENT (P1) > changed-device basic records > meter > periodic basic > extended > sensor > FRAG. A slave with more due than one frame per cycle catches up over the following cycles. The Master ACKs each DETAIL with an `ACK` (§10); an unacknowledged DETAIL is resent once, then dropped (the next periodic round replaces it).
 
 The Master updates each device's Modbus block from these records and stamps its age ([01](01-modbus-register-map.md)).
 
@@ -187,7 +190,7 @@ A replace-all sequence (op 3, 4…, 5) is applied only when op 5 arrives with al
 
 ### 8.2 Other configuration
 
-Schedule, fail-safe levels and other section settings travel as CMDs (`SET_SCHEDULE`, `SET_FAILSAFE_LEVELS`, `REASSERT_CONFIG`). When the BEACON's `config_ver` differs from the slave's copy, the Master pushes the changed items to that slave in the following cycles. A slave never applies a configuration the Master didn't send.
+Schedule, sensor settings, fail-safe levels and other section settings travel as CMDs (`SET_SCHEDULE`, `SET_SENSORS`, `SET_FAILSAFE_LEVELS`, `REASSERT_CONFIG`). When the BEACON's `config_ver` differs from the slave's copy, the Master pushes the changed items to that slave in the following cycles. A slave never applies a configuration the Master didn't send.
 
 ## 9. EVENT (TYPE `0x03`), slave → Master
 
@@ -270,6 +273,7 @@ Unicast to `n << 8`, or broadcast to `0xF00` (all slaves, MIC/encrypted with `Ne
 | `0x04` | `QUERY` | — | P2 |
 | `0x05` | `SET_TIME` | Server → Master only. Never sent on tier 1 | — |
 | `0x06` | `SET_SCHEDULE` | `lat` i32 (1e-5°) · `lon` i32 · `dusk_offset_min` i16 · `dawn_offset_min` i16 · `n_steps` u8 · up to 4 × {`local_minute` u16 · `level` u8} (13–25 B) | P2 |
+| `0x10` | `SET_SENSORS` | as [03 §10.2](03-tier2-device-protocol.md): `ldr_mode` u8 · `ldr_on` u8 · `ldr_off` u8 · `motion_mode` u8 · `motion_idle_level` u8 · `motion_hold_s` u16 · `tilt_alarm_deg` u8 · `impact_alarm` u8 (9 B). The slave stores it as section configuration and pushes it to its devices (03 §12.1) | P2 |
 | `0x07` | `REBOOT` | — | P2 |
 | `0x08` | `OPEN_COMMISSIONING` | `duration_min` u16 | P2 |
 | `0x09` | `AUTHORISE_DEVICE` | Becomes a WHITELIST frame (§8.1), not a CMD | — |
