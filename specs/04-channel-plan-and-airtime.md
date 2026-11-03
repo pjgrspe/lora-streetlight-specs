@@ -4,7 +4,7 @@
 |---|---|
 | **Spec** | 04 — Channel plan and airtime budget |
 | **Version** | 0.1 (draft for review) |
-| **Date** | 2026-10-29 |
+| **Date** | 2026-11-03 |
 | **Owner** | pgorospe |
 | **Reviewers** | Gateway hardware developer (for the client), device developer |
 | **Status** | Draft. Provisional until NTC confirms the radio limits (SOW assumption A3) |
@@ -15,17 +15,19 @@ Which frequencies each link uses, which spreading factors, the cycle timing on b
 
 | Limit | Value | Status |
 |---|---|---|
-| Band | 915–918 MHz | Decided. ⚠ Licensing status unconfirmed |
+| Band | Cells: **915–918 MHz**. Tier 1: **433.05–434.79 MHz** (D-040) | Decided. ⚠ Licensing status unconfirmed; ⚠ 433 MHz band edges and limits from MC 03-05-2007, not confirmed by NTC |
 | Channel width | 125 kHz | Decided |
-| Max EIRP | 16 dBm | ⚠ Awaiting NTC |
+| Max EIRP | Cells 16 dBm. Tier 1 **12 dBm** (10 mW ERP) | ⚠ Awaiting NTC |
 | Max single transmission | 400 ms | ⚠ Awaiting NTC |
-| Duty cycle | ≤1%, rolling 1 hour, **per box** (all radios in one enclosure together) | ⚠ Awaiting NTC: per box or per radio (Q21) |
+| Duty cycle | ≤1%, rolling 1 hour, **per box** (all radios in one enclosure together, both bands counted together) | ⚠ Awaiting NTC: per box or per radio (Q21) |
 
 All of these are configuration values with a compile-time ceiling. A different NTC answer changes configuration and this budget, not the protocol.
 
-## 2. Channel raster
+## 2. Channel rasters
 
-14 channels, 200 kHz apart. Each 125 kHz channel stays inside 915–918 MHz.
+Two rasters, both 200 kHz apart: 14 channels at 915 MHz for the cells, and 8 channels at 433 MHz for tier 1 (D-040). Each 125 kHz channel stays inside its band. Channel numbers 14 and 15 don't exist.
+
+**915 MHz, ch 0–13:**
 
 | Ch | Centre (MHz) | Ch | Centre (MHz) |
 |---|---|---|---|
@@ -37,16 +39,28 @@ All of these are configuration values with a compile-time ceiling. A different N
 | 5 | 916.2 | 12 | 917.6 |
 | 6 | 916.4 | 13 | 917.8 |
 
-`f(ch) = 915.2 MHz + ch × 0.2 MHz`. The SX1262 frequency word is `Frf = f / 0.95367431640625 Hz` (f × 2²⁵ / 32 MHz).
+**433 MHz, ch 16–23:**
+
+| Ch | Centre (MHz) | Ch | Centre (MHz) |
+|---|---|---|---|
+| 16 | 433.175 | 20 | 433.975 |
+| 17 | 433.375 | 21 | 434.175 |
+| 18 | 433.575 | 22 | 434.375 |
+| 19 | 433.775 | 23 | 434.575 |
+
+`f(ch) = 915.2 MHz + ch × 0.2 MHz` for ch 0–13, and `433.175 MHz + (ch − 16) × 0.2 MHz` for ch 16–23. The driver runs the SX1262 image calibration for the channel's band (902–928 or 430–440 MHz) when a radio first uses it. The SX1262 frequency word is `Frf = f / 0.95367431640625 Hz` (f × 2²⁵ / 32 MHz).
 
 ## 3. Channel assignment
 
 | Link | Channel(s) | Why |
 |---|---|---|
-| **Tier 1, primary** | **Ch 0** (915.2) | Lowest band edge |
-| **Tier 1, standby** | **Ch 13** (917.8) | Opposite band edge: maximum frequency diversity from the primary |
+| **Tier 1, primary** | **Ch 16** (433.175) | Low end of the 433 MHz band |
+| **Tier 1, standby** | **Ch 23** (434.575) | High end: 1.4 MHz from the primary, the most this raster allows |
 | **Section n, cell channel A** | **Ch n** | n = 1…6 |
 | **Section n, cell channel B** | **Ch n + 6** | 1.2 MHz from channel A, so a slave's two receivers aren't on adjacent channels |
+| Ch 0 and ch 13 (915.2, 917.8) | Free | Tier 1 used them before D-040. Kept free as band-edge guards; a possible spare pair after the site scan |
+
+A slave's upstream radios (433 MHz) and downstream radios (915 MHz) are in different bands, so a transmission on one tier doesn't deafen the other tier's radios in the same box. Two radios in the same band still can ([06](06-gateway-hardware-requirements.md) §11).
 
 | Section | Ch A | Ch B |
 |---|---|---|
@@ -95,8 +109,8 @@ Firmware computes time on air with the Semtech formula (`lora_airtime_ms()`) and
 
 ```
 t (s)                       Master time, from the start of the cycle
-0.0    BEACON on the primary channel (ch 0)
-0.5    HEARTBEAT on the standby channel (ch 13)       ← proves the standby path every cycle
+0.0    BEACON on the primary channel (ch 16)
+0.5    HEARTBEAT on the standby channel (ch 23)       ← proves the standby path every cycle
 1.0    contention window, 1 s: slave EVENTs and JOIN_REQs
 2.0    slot for slave 1      ┐
 4.0    slot for slave 2      │  T1_SLOT = 2.0 s each, in GwID order.
@@ -155,6 +169,8 @@ A P0 command (emergency lights on, group switching) doesn't wait for a window:
 ## 7. Duty-cycle budget
 
 Budget per box: 1% of 3600 s = **36 s of transmit time per hour**. **25% (9 s) is reserved for P0** and can't be used by anything else.
+
+Both bands share this one budget, which is conservative. If NTC gives each band its own budget, the tier-1 frames (SUMMARY, DETAIL, heartbeats) leave the 915 MHz budget and the slave gains margin.
 
 ### 7.1 Slave (the critical box)
 
@@ -215,3 +231,5 @@ An LED device sends one 247 ms report per cycle: 0.2% at 120 s. The meter sends 
 | O-04-2 | Is a 2-minute status cycle acceptable to the client? (60 s needs a per-radio duty answer) | M1 sign-off |
 | O-04-3 | Band occupancy scan at the site before channels are fixed | Before field use |
 | O-04-4 | Confirm the sections that will reuse a channel pair are far enough apart (only if there are more than 6 sections) | Survey |
+| O-04-5 | NTC: limits for tier 1 at 433 MHz (power, duty cycle, band edges, licensing), D-040 | End of week 3 |
+| O-04-6 | Bench test of the tuned 433 MHz Ra-01SH modules: RSSI at 433 vs 915 MHz at the same spacing (bench key `q`); harmonics if a spectrum analyser is available | Before the Slave enclosure is final |

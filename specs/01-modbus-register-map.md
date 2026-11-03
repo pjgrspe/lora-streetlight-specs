@@ -430,8 +430,8 @@ Codes `0x0000`–`0x7FFF` are carried unchanged from radio EVENT frames; slaves 
 | `0x000A` | `cfg_dawn_offset_min` | i16 | 1 | min | RW | Switch-off time relative to computed sunrise (positive = later) |
 | `0x000B` | `cfg_cycle_s` | u16 | 1 | s | RW | Cycle length: 120 (default), 180 or 300. 60 only if NTC confirms a per-radio duty budget (spec 04) |
 | `0x000C` | `cfg_section_mask` | bits16 | 1 |  | RW | Configured sections: bit s = section s (bits 1-14) |
-| `0x000D` | `cfg_t1_primary_ch` | u16 | 1 |  | RW | Tier-1 primary channel number. Default 0 |
-| `0x000E` | `cfg_t1_standby_ch` | u16 | 1 |  | RW | Tier-1 standby channel number. Default 13 |
+| `0x000D` | `cfg_t1_primary_ch` | u16 | 1 |  | RW | Tier-1 primary channel number (04 §2: 0–13 = 915 MHz raster, 16–23 = 433 MHz raster). Default 16 (433.175 MHz) |
+| `0x000E` | `cfg_t1_standby_ch` | u16 | 1 |  | RW | Tier-1 standby channel number, same numbering. Default 23 (434.575 MHz) |
 | `0x000F` | `cfg_t1_sf` | u16 | 1 |  | RW | Tier-1 spreading factor, 7 (default) or 8 |
 | `0x0010` | `cfg_radio_a_tx_dbm` | i16 | 1 | dBm | RW | Radio A conducted TX power. Must keep EIRP at or below 16 dBm |
 | `0x0011` | `cfg_radio_b_tx_dbm` | i16 | 1 | dBm | RW | Radio B conducted TX power. Must keep EIRP at or below 16 dBm |

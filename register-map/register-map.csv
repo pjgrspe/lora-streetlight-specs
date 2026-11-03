@@ -144,8 +144,8 @@ holding,0x0009,0x0000,0x0009,0x0000,0x0000,1,cfg_dusk_offset_min,i16,1,min,RW,no
 holding,0x000A,0x0000,0x000A,0x0000,0x0000,1,cfg_dawn_offset_min,i16,1,min,RW,none,Switch-off time relative to computed sunrise (positive = later)
 holding,0x000B,0x0000,0x000B,0x0000,0x0000,1,cfg_cycle_s,u16,1,s,RW,none,"Cycle length: 120 (default), 180 or 300. 60 only if NTC confirms a per-radio duty budget (spec 04)"
 holding,0x000C,0x0000,0x000C,0x0000,0x0000,1,cfg_section_mask,bits16,1,,RW,none,Configured sections: bit s = section s (bits 1-14)
-holding,0x000D,0x0000,0x000D,0x0000,0x0000,1,cfg_t1_primary_ch,u16,1,,RW,none,Tier-1 primary channel number. Default 0
-holding,0x000E,0x0000,0x000E,0x0000,0x0000,1,cfg_t1_standby_ch,u16,1,,RW,none,Tier-1 standby channel number. Default 13
+holding,0x000D,0x0000,0x000D,0x0000,0x0000,1,cfg_t1_primary_ch,u16,1,,RW,none,"Tier-1 primary channel number (spec 04 section 2: 0-13 = 915 MHz raster, 16-23 = 433 MHz raster). Default 16 (433.175 MHz)"
+holding,0x000E,0x0000,0x000E,0x0000,0x0000,1,cfg_t1_standby_ch,u16,1,,RW,none,"Tier-1 standby channel number, same numbering. Default 23 (434.575 MHz)"
 holding,0x000F,0x0000,0x000F,0x0000,0x0000,1,cfg_t1_sf,u16,1,,RW,none,"Tier-1 spreading factor, 7 (default) or 8"
 holding,0x0010,0x0000,0x0010,0x0000,0x0000,1,cfg_radio_a_tx_dbm,i16,1,dBm,RW,none,Radio A conducted TX power. Must keep EIRP at or below 16 dBm
 holding,0x0011,0x0000,0x0011,0x0000,0x0000,1,cfg_radio_b_tx_dbm,i16,1,dBm,RW,none,Radio B conducted TX power. Must keep EIRP at or below 16 dBm

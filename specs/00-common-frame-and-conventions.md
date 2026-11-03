@@ -91,14 +91,14 @@ Examples: Master `0x000`. Slave of section 3 `0x300`. Device 17 in section 3 `0x
 
 | Setting | Value |
 |---|---|
-| Radio | Semtech SX1262, Ai-Thinker Ra-01SH module (803–930 MHz), on every gateway and device (D-036). Sync word 0x12 is written as 0x1424 in the SX1262 registers |
+| Radio | Semtech SX1262, Ai-Thinker Ra-01SH module (803–930 MHz), on every gateway and device (D-036). Tier-1 radios carry 433 MHz matching parts (D-040). Sync word 0x12 is written as 0x1424 in the SX1262 registers |
 | Modulation | LoRa, **125 kHz**, coding rate **4/5**, **explicit header**, **PHY CRC on** |
 | Preamble | 8 symbols |
 | Sync word | `0x12` (private). Configurable per site. Never `0x34` (LoRaWAN) |
 | IQ | **Normal on uplink, inverted on downlink.** Devices don't hear each other's uplinks, and slaves don't hear each other's beacons |
 | Spreading factor | SF7–SF9 in v1 (per tier, see [04](04-channel-plan-and-airtime.md)). SF11/SF12 are never used |
 | Max single transmission | **400 ms** (dwell limit). Every TX is checked against the time-on-air formula before it is sent |
-| Max EIRP | **16 dBm.** Conducted power = 16 dBm − antenna gain + cable loss, set per radio in configuration |
+| Max EIRP | **16 dBm on the cells (915 MHz), 12 dBm on tier 1 (433 MHz, 10 mW ERP)** ⚠ awaiting NTC. Conducted power = EIRP limit − antenna gain + cable loss, set per radio in configuration |
 | Duty cycle | ≤1% per **box** (all radios in an enclosure share one budget), rolling 1-hour window |
 
 ## 5. Frame format
