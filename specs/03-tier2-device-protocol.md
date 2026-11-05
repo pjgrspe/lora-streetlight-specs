@@ -4,7 +4,7 @@
 |---|---|
 | **Spec** | 03 — Tier-2 device protocol (Slave Gateway ↔ LED devices and energy meter) |
 | **Version** | 0.9 (release candidate for spec-v1.0, review r2) |
-| **Date** | 2026-11-03 |
+| **Date** | 2026-11-05 |
 | **Owner** | pgorospe |
 | **Reviewers** | **Device developer** (primary), gateway hardware developer (for the client) |
 | **Status** | Release candidate. Not frozen until spec-v1.0 is signed |
@@ -302,7 +302,7 @@ Only `FALLBACK_EXITED` is sent: it carries the minutes spent in fallback, and `F
 
 ### 10.1 CMD (TYPE `0x04`), Slave → device(s)
 
-Sent in the downlink window (cell time ≥ 16 s), or **immediately** for P0 ([04 §6.4](04-channel-plan-and-airtime.md)). Same 10-byte header for unicast and group commands.
+Sent in the downlink window (cell time ≥ 16 s), or **immediately** for P0, with one more set of copies at the start of the downlink window if the first went among the reports ([04 §6.4](04-channel-plan-and-airtime.md), D-043). Same 10-byte header for unicast and group commands.
 
 | Off | Size | Field | Notes |
 |---|---|---|---|

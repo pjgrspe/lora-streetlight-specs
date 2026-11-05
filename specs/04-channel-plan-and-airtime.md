@@ -4,7 +4,7 @@
 |---|---|
 | **Spec** | 04 — Channel plan and airtime budget |
 | **Version** | 0.9 (release candidate for spec-v1.0, review r2) |
-| **Date** | 2026-11-03 |
+| **Date** | 2026-11-05 |
 | **Owner** | pgorospe |
 | **Reviewers** | Gateway hardware developer (for the client), device developer |
 | **Status** | Release candidate. Provisional until NTC confirms the radio limits (SOW assumption A3) |
@@ -150,6 +150,7 @@ A P0 command (emergency lights on, group switching) doesn't wait for a window:
 
 - The Master sends it immediately, on **both** tier-1 radios, and repeats it once 1 s later.
 - A Slave receiving it broadcasts it into its cell immediately, on both channels, and repeats it once 1 s later. Any device reports lost to this pre-emption are not retried: reports are snapshots, and the next cycle's report replaces them.
+- **If those copies go before the downlink window** (cell time < 16 s, so they fall among the devices' reports and can all collide), the Slave sends the same copies once more at the start of the downlink window: one on each channel, and again 1 s later, byte-identical (same `FCNT`). A device that already has the command drops them as duplicates; one that missed it executes it at once if `execute_at` has passed, so it switches late but doesn't stay at the old level (D-043). A newer command with the same opcode for the same group (or for all) cancels these copies if they haven't gone yet, so a device can't apply an older level after a newer one.
 - Every P0 command carries `execute_at` at least 5 s in the future, so all devices act at the same moment.
 
 ## 7. Duty-cycle budget
