@@ -212,7 +212,7 @@ Alarms and state changes, including device events forwarded from the cell. `ACKR
 
 | Code | Name | Severity | `data` |
 |---|---|---|---|
-| `0x01` | `SLAVE_RESTARTED` | warning | reset cause u8 (1 power-on, 2 brown-out, 3 watchdog, 4 software, 5 pin) |
+| `0x01` | `SLAVE_RESTARTED` | warning | reset cause u8 (1 power-on, 2 brown-out, 3 watchdog, 4 software, 5 pin). Sent once per boot, after the first join; a rejoin after lost beacons is not a restart (D-044) |
 | `0x02` | `NODE_MISSING` | alarm | last seen utc u32. Raised after **3 missed reports** (6 min) |
 | `0x03` | `NODE_RETURNED` | info | — |
 | `0x04` | `SECTION_DARK` | critical | expected level u8, measured power W u32 |
