@@ -167,7 +167,7 @@ Per-device and meter data that doesn't fit in the SUMMARY. Sent at +0.75 in the 
 
 **Sensor record (5 B):** `node_id` u8 · `motion_count` u16 (sum of the device's `motion_count` since the previous sensor record, saturating at 65 534; 0xFFFF = no motion sensor) · `ambient` u8 (latest, [03 §7.1](03-tier2-device-protocol.md); 255 = no light sensor) · `sensor_flags` u8 (bit0 light sensor reported, bit1 motion sensor reported, bit2 `sensor_fault`).
 
-**Order of preference** when more than one frame is due: EVENT (P1) > changed-device basic records > meter > periodic basic > extended > sensor > FRAG. A slave with more due than one frame per cycle catches up over the following cycles. The Master ACKs each DETAIL with an `ACK` (§10); an unacknowledged DETAIL is resent once, then dropped (the next periodic round replaces it).
+**Order of preference** when more than one frame is due: basic records of devices just back from missing > EVENT (P1) > changed-device basic records > meter > periodic basic > extended > sensor > FRAG (D-045). A device the slave counts as missing (not heard for 3 cycles, §9) gets no basic record: a basic record tells the Master the device is there, and the Master clears its "not responding" on it. When a device comes back, its basic record goes at once (up to 20 in one frame), ahead of any queued events. The meter record also goes at once when the section's measured power has moved by more than 10 % since the last one sent, so a level change shows in the area's power within a cycle. A slave with more due than one frame per cycle catches up over the following cycles. The Master ACKs each DETAIL with an `ACK` (§10); an unacknowledged DETAIL is resent once, then dropped (the next periodic round replaces it).
 
 The Master updates each device's Modbus block from these records and stamps its age ([01](01-modbus-register-map.md)).
 
@@ -215,6 +215,8 @@ Alarms and state changes, including device events forwarded from the cell. `ACKR
 | `0x01` | `SLAVE_RESTARTED` | warning | reset cause u8 (1 power-on, 2 brown-out, 3 watchdog, 4 software, 5 pin) |
 | `0x02` | `NODE_MISSING` | alarm | last seen utc u32. Raised after **3 missed reports** (6 min) |
 | `0x03` | `NODE_RETURNED` | info | — |
+
+**Missing and returned (D-045).** Events go one per slot frame (one a cycle), so after many devices go silent at once the queue holds more than it can send for a while. The slave queues each `NODE_MISSING` / `NODE_RETURNED` only when there is room, and tries again at its next check otherwise; a change that undoes one still queued cancels it instead (a device back before its `NODE_MISSING` went out sends neither). The device's "not responding" state at the Master doesn't wait for these events: it follows the basic records (§7).
 | `0x04` | `SECTION_DARK` | critical | expected level u8, measured power W u32 |
 | `0x05` | `MAINS_LOSS` | critical | — (meter lost all phases, or all devices silent at once) |
 | `0x06` | `PHASE_LOSS` | critical | phase mask u8 (bit0 L1, bit1 L2, bit2 L3) |
@@ -341,13 +343,13 @@ A slave confirms a broadcast command from its devices' next REPORTs (`last_cmd_f
 | 4 | `REFUSED_UNSAFE` | Refused by a safety rule, e.g. `SET_LEVEL` below 254 with an untrusted clock, or a `SET_TIME` jump without `force` | ✓ | ✓ | ✓ |
 | 5 | `BAD_OPCODE` | Unknown or reserved opcode | ✓ | ✓ | ✓ |
 | 6 | `BAD_PARAMS` | A parameter out of range, or an unused parameter not 0 | ✓ | ✓ | ✓ |
-| 7 | `BUSY` | Can't accept now; retry later. (On Modbus a full queue is exception `0x06` instead) | ✓ | ✓ | |
+| 7 | `BUSY` | Can't accept now; retry later. A slave whose cell is still busy with another unicast answers this (it handles one at a time), not `TARGET_OFFLINE` (D-045). (On Modbus a full queue is exception `0x06` instead) | ✓ | ✓ | |
 | 8 | `TARGET_NOT_CONFIGURED` | Section or device not configured / not found | ✓ | | ✓ |
 | 9 | `PARTIAL` | Some targets confirmed, some not (see the fail bitmap). On Modbus this is the job state `PARTIAL` | ✓ | | |
 | 10 | `FAILED` | Execution failed (e.g. a DALI error), or no target confirmed. On Modbus this is the job state `FAILED` | ✓ | ✓ | |
 | 11 | `BAD_TARGET` | Target not valid for this opcode | | | ✓ |
 | 12 | `BAD_CRC` | `cmd_args_crc` doesn't match | | | ✓ |
-| 13 | `TARGET_OFFLINE` | Target offline at dispatch (unicast only) | ✓ | | ✓ |
+| 13 | `TARGET_OFFLINE` | Target offline at dispatch: not joined (unicast only) | ✓ | | ✓ |
 | 14 | `TIMEOUT` | TTL reached before every target confirmed | | | ✓ |
 | 15 | `NOT_SUPPORTED` | Target doesn't support the opcode (e.g. `REPLACE_DRIVER` on a meter) | ✓ | ✓ | ✓ |
 | 16 | `AIRTIME_DEFERRED` | Couldn't be sent within its TTL because of the airtime budget | ✓ | | ✓ |
