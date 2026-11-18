@@ -252,7 +252,7 @@ Source: the slave's SUMMARY frame each cycle ([02](02-tier1-protocol.md)), plus 
 
 | Offset | Name | Type | Scale | Unit | Access | Description |
 |---|---|---|---|---|---|---|
-| `+0` | `sec_section_state` | enum16 | 1 |  | R | Master view of the section: 0 not configured, 1 SYNCED, 2 DEGRADED, 3 AUTONOMOUS, 4 CLOCK_UNTRUSTED, 5 REJOINING, 6 LOST (no SUMMARY for 3 cycles) |
+| `+0` | `sec_section_state` | enum16 | 1 |  | R | Master view of the section: 0 not configured, 1 SYNCED, 2 DEGRADED, 3 AUTONOMOUS, 4 CLOCK_UNTRUSTED, 5 REJOINING (joined, its first SUMMARY not in yet), 6 LOST (not joined, or no SUMMARY for 3 cycles) |
 | `+1` | `sec_age_s` | u16 | 1 | s | R | Seconds since the last SUMMARY from this slave. 0xFFFF = never |
 | `+2` | `sec_section_flags` | bits16 | 1 |  | R | bit0 single-channel mode, bit1 up radio A OK, bit2 up radio B OK, bit3 down radio A OK, bit4 down radio B OK, bit5 slave using standby uplink, bit6 commissioning window open, bit7 config mismatch with master |
 | `+3` | `sec_devices_configured` | u16 | 1 |  | R | Devices authorised in this section |
