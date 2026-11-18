@@ -397,7 +397,7 @@ Devices that missed both cell copies of a group command are not resent by the sl
 
 ### 13.1 Distribution
 
-- The Master is the time root. Its time comes from its RTC, corrected by the server's `SET_TIME` ([01](01-modbus-register-map.md)). The Master rejects a jump of more than 5 minutes unless `force = 1`.
+- The Master is the time root. Its time comes from its RTC, corrected by the server's `SET_TIME` ([01](01-modbus-register-map.md)). The Master rejects a jump of more than 5 minutes unless `force = 1` **or its clock is untrusted** (§13.2): the guard protects a trusted clock from a wrong server clock, and an untrusted one has nothing to protect. Until a `SET_TIME` is accepted (or the RTC kept time), the Master's BEACONs carry `clock_trusted = 0`.
 - **The `utc` + `ms` in a BEACON is the Master's clock at the moment the frame's transmission ends (TxDone).** The Master computes it as scheduled TX start + time on air.
 - A slave timestamps the BEACON at RxDone (the radio's RxDone interrupt: DIO1 on the SX1262) and computes `offset = beacon_time − local_time_at_rxdone`.
 - The slave filters the offset with an EWMA (α = 1/4), estimates its own rate error over at least 10 BEACONs, and extrapolates between BEACONs. It steps its clock only if the offset exceeds 1 s; otherwise it slews.
